@@ -1,0 +1,10 @@
+Metadata-Version: 2.4
+Name: cmap
+Version: 0.0.1
+Author: Hassan Razavi
+Author-email: hassan.razavi@aalto.fi
+Requires-Dist: jax[cuda12]
+Requires-Dist: matplotlib
+Dynamic: author
+Dynamic: author-email
+Dynamic: requires-dist
