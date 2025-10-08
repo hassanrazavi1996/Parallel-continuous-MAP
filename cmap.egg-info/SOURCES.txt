@@ -4,13 +4,7 @@ cmap/Linear_model_data.py
 cmap/Linear_model_jax.py
 cmap/__init__.py
 cmap/clqt_jax.py
-cmap/clqt_np.py
-cmap/clqt_tf.py
 cmap/diffeq_jax.py
-cmap/diffeq_np.py
-cmap/diffeq_tf.py
-cmap/disc.py
-cmap/lqt_np.py
 cmap/my_assoc_scan.py
 cmap.egg-info/PKG-INFO
 cmap.egg-info/SOURCES.txt
