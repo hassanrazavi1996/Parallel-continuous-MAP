@@ -48,7 +48,7 @@ def getCLQT(ocp: cmap):
 
     mu = jnp.array([5.0, 5.0, 0.0, 0.0])
 
-    steps=500000
+    steps=5000
     dt=T/steps
 
     _, X, y, Y, y_rev = make_cv_data(mu, Sigma(0),steps,dt,q,v,seed=123)

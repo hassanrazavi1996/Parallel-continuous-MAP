@@ -8,6 +8,6 @@ config.update("jax_enable_x64", True)
 
 def euler(f: Callable, dt: float, x: jnp.ndarray, t: Optional[float]) -> jnp.ndarray:
 
-    dx = f(x, t) * dt
+    dx = f(x, t)* dt
     x_next = x + dx
     return x_next

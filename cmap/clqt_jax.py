@@ -125,9 +125,10 @@ def seqBackwardPass(ocp: CLQT, steps, dt, t0, S, v):
     Q = ocp.Q(0)
     KxT = jnp.zeros((Q.shape[-1], Q.shape[-2]), dtype=Q.dtype)
     dT = jnp.zeros((Q.shape[-1],), dtype=Q.dtype)
-    Ts = jnp.arange(steps, dtype=v.dtype) * dt
-
+    Ts = jnp.arange(steps, dtype=v.dtype)*dt
+     
     def body(carry, t):
+
         f = lambda x, t: riccati_ode_f(ocp, x, t)
         S, v, _, _ = carry
         x = pack_Sv(S, v)
@@ -137,12 +138,11 @@ def seqBackwardPass(ocp: CLQT, steps, dt, t0, S, v):
         Q = ocp.Q(t)
 
         Kx = Q @ S
-        d = Q @ v
+        d  = Q @ v
         return (S, v, Kx, d), (S, v, Kx, d)
 
     _, (Ss, vs, Kxs, ds) = jax.lax.scan(
-        f=body, init=(S, v, KxT, dT), xs=(t0 + Ts), reverse=True
-    )
+        f=body, init=(S, v, KxT, dT), xs=(t0 + Ts), reverse=True)
 
     Ss = jnp.concatenate([Ss, S[None, ...]], axis=0)
     vs = jnp.concatenate([vs, v[None, ...]], axis=0)

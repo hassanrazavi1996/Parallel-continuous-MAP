@@ -3,7 +3,7 @@ import numpy as np
 import jax.numpy as jnp
 from jax import lax
 from scipy import signal
-
+from jax import debug
 
 def make_cv_data(m0, P0, nsteps=5000, dt=0.01, q=0.2, r=0.01, seed=None):
 
@@ -78,10 +78,12 @@ def make_cv_data(m0, P0, nsteps=5000, dt=0.01, q=0.2, r=0.01, seed=None):
 
     def y_rev(t):
         dt_sim = dt
+        
         if jnp.array(t).ndim == 1:
             t_a = jnp.array(t)
             k = jnp.ceil((tf-t_a) / dt_sim).astype(jnp.int32)
             k = jnp.clip(k, 0, nsteps - 1)
+            jax.debug.print("k_rev: {k}", k=k)
 
             y_vals = jax.vmap(
                 lambda idx: jax.lax.dynamic_index_in_dim(DY_jax0, idx, keepdims=False))(k)
@@ -95,16 +97,19 @@ def make_cv_data(m0, P0, nsteps=5000, dt=0.01, q=0.2, r=0.01, seed=None):
             k = jnp.ceil((tf-t_a) / dt_sim).astype(jnp.int32)
 
             k = jnp.clip(k, 0, nsteps - 1)
+            jax.debug.print("k_rev: {k}", k=k)
             y_vals = DY_jax0[k]
 
             return y_vals.reshape(2,)
         else:
             t_a = jnp.asarray(t)
-
+          
             k = jnp.ceil((tf-t_a) / dt_sim).astype(jnp.int32)
             k = jnp.clip(k, 0, nsteps - 1).T
-
+            jax.debug.print("k_rev: {k}", k=k)
             y_vals = jnp.take(DY_jax0, k, axis=0)
             return y_vals.T
 
+    # return T, X, y, Y, y_rev
     return T, X, y, Y, y_rev
+
