@@ -1,14 +1,10 @@
-import jax
-import jax.numpy as jnp
-import math
-import cmap.clqt_jax as cmap
-from jax import random, lax
-import numpy as np
-from cmap.Linear_model_data import make_cv_data
-
 from jax import config
-
 config.update("jax_enable_x64", True)
+import jax.numpy as jnp
+import cmap.clqt_jax as cmap
+from cmap.Linear_model_data import make_cv_data
+from cmap.con_to_dis import y_reverse
+
 
 
 ###########################################################################
@@ -18,7 +14,7 @@ config.update("jax_enable_x64", True)
 ###########################################################################
 
 
-def getCLQT(ocp: cmap):
+def getCLQT(ocp: cmap,steps):
 
     # ######################
     T = 50.0
@@ -27,8 +23,8 @@ def getCLQT(ocp: cmap):
     v=0.001
     W = lambda t: q * jnp.eye(2)
     H_rev = lambda t: jnp.array([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]])
-    R = lambda t: 0.001 * jnp.eye(2)
-    Sigma = lambda t: 0.01 * jnp.eye(4)
+    R = lambda t: v * jnp.eye(2)
+    P0 = lambda t: 0.01 * jnp.eye(4)
 
     F_rev = lambda t: -jnp.array(
         [
@@ -36,7 +32,7 @@ def getCLQT(ocp: cmap):
             [0.0, 0.0, 0.0, 1.0],
             [0.0, 0.0, 0.0, 0.0],
             [0.0, 0.0, 0.0, 0.0],
-])
+    ])
     L_rev = lambda t: -jnp.array([[0.0, 0.0], [0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
     Q = lambda t: L_rev(t) @ W(t) @ L_rev(t).T
     c_rev = lambda t: -jnp.zeros((4,))
@@ -46,13 +42,15 @@ def getCLQT(ocp: cmap):
 
     R_rev = lambda t: R(T - t)
 
-    mu = jnp.array([5.0, 5.0, 0.0, 0.0])
+    x0 = jnp.array([5.0, 5.0, 0.0, 0.0])
 
-    steps=5000
+    mu=jnp.linalg.solve(P0(0),x0)
+
     dt=T/steps
+    Sigma=lambda t: 100 * jnp.eye(4)
 
-    _, X, y, Y, y_rev = make_cv_data(mu, Sigma(0),steps,dt,q,v,seed=123)
+    X,y_discrete,y_discrete_rev = make_cv_data(x0, P0(0),steps,dt,q,v,seed=123)
+    y_rev=lambda t: y_reverse(t,T,dt,steps,y_discrete)
+    clqt = cmap.CLQT(mu, F_rev, Sigma, Q_rev, R_rev, c_rev, H_rev, y_rev, T,L_rev,W)
 
-    clqt = cmap.CLQT(mu, F_rev, Sigma, Q_rev, R_rev, c_rev, H_rev, y_rev, T)
-
-    return clqt, mu
+    return clqt, x0,P0,q,v

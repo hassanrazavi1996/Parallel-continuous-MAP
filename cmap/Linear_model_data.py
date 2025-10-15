@@ -1,9 +1,8 @@
-import jax
+from jax import config
+config.update("jax_enable_x64", True)
 import numpy as np
 import jax.numpy as jnp
-from jax import lax
-from scipy import signal
-from jax import debug
+
 
 def make_cv_data(m0, P0, nsteps=5000, dt=0.01, q=0.2, r=0.01, seed=None):
 
@@ -41,75 +40,8 @@ def make_cv_data(m0, P0, nsteps=5000, dt=0.01, q=0.2, r=0.01, seed=None):
             DY[k] = dy
             Y[k] = y
             T[k + 1] = t
-    tf=np.ceil(T[-1])
 
-    DY_jax0 = jnp.array(DY) / dt
-    # DY_jax = jnp.flip(DY_jax0, axis=0)
-    def y(t):
-        dt_sim = dt
-
-        if jnp.array(t).ndim == 1:
-            t_a = jnp.array(t)
-            k = jnp.floor(t_a / dt_sim).astype(jnp.int32)
-            k = jnp.clip(k, 0, nsteps - 1)
-            y_vals = jax.vmap(
-                lambda idx: jax.lax.dynamic_index_in_dim(DY_jax0, idx, keepdims=False))(k)
-
-            y_vals = y_vals.T
-
-            return y_vals.reshape(2, len(t))
-        elif jnp.array(t).ndim == 0:
-            t_a = jnp.array(t)
-
-            k = jnp.floor(t_a / dt_sim).astype(jnp.int32)
-
-            k = jnp.clip(k, 0, nsteps - 1)
-            y_vals = DY_jax0[k]
-
-            return y_vals.reshape(2,)
-        else:
-            t_a = jnp.asarray(t)
-
-            k = jnp.floor(t_a / dt_sim).astype(jnp.int32)
-            k = jnp.clip(k, 0, nsteps - 1).T
-
-            y_vals = jnp.take(DY_jax0, k, axis=0)
-            return y_vals.T
-
-    def y_rev(t):
-        dt_sim = dt
-        
-        if jnp.array(t).ndim == 1:
-            t_a = jnp.array(t)
-            k = jnp.ceil((tf-t_a) / dt_sim).astype(jnp.int32)
-            k = jnp.clip(k, 0, nsteps - 1)
-            jax.debug.print("k_rev: {k}", k=k)
-
-            y_vals = jax.vmap(
-                lambda idx: jax.lax.dynamic_index_in_dim(DY_jax0, idx, keepdims=False))(k)
-
-            y_vals = y_vals.T
-
-            return y_vals.reshape(2, len(t))
-        elif jnp.array(t).ndim == 0:
-            t_a = jnp.array(t)
-
-            k = jnp.ceil((tf-t_a) / dt_sim).astype(jnp.int32)
-
-            k = jnp.clip(k, 0, nsteps - 1)
-            jax.debug.print("k_rev: {k}", k=k)
-            y_vals = DY_jax0[k]
-
-            return y_vals.reshape(2,)
-        else:
-            t_a = jnp.asarray(t)
-          
-            k = jnp.ceil((tf-t_a) / dt_sim).astype(jnp.int32)
-            k = jnp.clip(k, 0, nsteps - 1).T
-            jax.debug.print("k_rev: {k}", k=k)
-            y_vals = jnp.take(DY_jax0, k, axis=0)
-            return y_vals.T
-
-    # return T, X, y, Y, y_rev
-    return T, X, y, Y, y_rev
+    DY_jax0 = jnp.array(DY,dtype=jnp.float64) / dt
+    DY_jax1 = jnp.flip(DY_jax0, axis=0)
+    return X,DY_jax0,DY_jax1
 

@@ -1,11 +1,12 @@
-import numpy as np
 import jax
-import jax.numpy as jnp
-from cmap.diffeq_jax import euler
-
 from jax import config
 
 config.update("jax_enable_x64", True)
+
+from cmap.diffeq_jax import euler
+import jax.numpy as jnp
+import numpy as np
+
 
 
 def pack_Pm(P, m):
@@ -24,7 +25,7 @@ def unpack_Pm(x):
 
 def kalman_bucy_filter(F, L, W, H, R, y, steps, dt, t0, P0, m0):
 
-    Ts = jnp.arange(steps, dtype=m0.dtype) * dt
+    Ts = jnp.arange(0,steps, dtype=jnp.float64) * dt
 
     def odes(F, L, W, H, R, y, x, t):
         P, m = unpack_Pm(x)
@@ -86,9 +87,9 @@ def continuous_rts_smoother(Ps_f, ms_f, Fs, Ls, Qs, t_eval, dt):
         L = Ls(t)
         Q = Qs(t)
 
-        G = F + L @ Q @ L.T @ jnp.linalg.inv(P)
+        G = F + L @ Q @ L.T @ jnp.linalg.solve(P, jnp.eye(n))
 
-        dm = F @ ms_s[k + 1] + L @ Q @ L.T @ jnp.linalg.inv(P) @ (ms_s[k + 1] - m)
+        dm = F @ ms_s[k + 1] + L @ Q @ L.T @ jnp.linalg.solve(P,jnp.eye(n)) @ (ms_s[k + 1] - m)
         dP = G @ Ps_s[k + 1] + Ps_s[k + 1] @ G.T - L @ Q @ L.T
 
         ms_s[k] = ms_s[k + 1] - dm * dt
