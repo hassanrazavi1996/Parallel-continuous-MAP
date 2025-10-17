@@ -6,6 +6,6 @@ setup(
     author="Hassan Razavi",
     author_email="hassan.razavi@aalto.fi",
     description="",
-    install_requires=["jax[cuda12]", "matplotlib"],
+    install_requires=["jax[cuda12]", "matplotlib", "pandas"],
     zip_safe=False,
 )

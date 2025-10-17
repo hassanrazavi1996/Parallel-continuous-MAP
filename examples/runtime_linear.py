@@ -10,17 +10,17 @@ from cmap.clqt_jax import CLQT
 from cmap.Linear_model_jax import getCLQT 
 import matplotlib.pyplot as plt
 import jax.numpy as jnp
+import pandas as pd
 
 from cmap.speedtest_function_linear import clqt_seq_speedtest_linear
 from cmap.speedtest_function_linear import clqt_par_speedtest_linear
 
-# jax.config.update("jax_platform_name", "metal")
+jax.config.update("jax_platform_name", "cuda")
 
-
-blocks = jnp.logspace(2, 5, 20, base=10, dtype=jnp.int32)
+blocks = jnp.logspace(2, 3, 5, base=10, dtype=jnp.int32)
 n =10 
 
-
+print(blocks)
 
 par_time_means = []
 seq_time_means = []
@@ -67,22 +67,24 @@ for i in range(0,len(blocks)):
 
 
 
-        par_time_array.append(seq_time)
-        seq_time_array.append(par_time)
-
-
-    
-
+        par_time_array.append(par_time)
+        seq_time_array.append(seq_time)
 
 
     par_time_means.append(jnp.mean(jnp.array(par_time_array)))
     seq_time_means.append(jnp.mean(jnp.array(seq_time_array)))
 
 
-        
-
 par_time_means_arr = jnp.array(par_time_means)
 seq_time_means_arr = jnp.array(seq_time_means)
+
+
+df_mean_par = pd.DataFrame(par_time_means_arr)
+df_mean_seq = pd.DataFrame(seq_time_means_arr)
+
+
+df_mean_par.to_csv("par_time_linearcase.csv")
+df_mean_seq.to_csv("seq_time_linearcase.csv")
 
 plt.plot(blocks, par_time_means_arr, label='Parallel Backward Pass', marker='o')
 plt.plot(blocks, seq_time_means_arr, label='Sequential Backward Pass', linestyle='--', marker='x')
