@@ -18,7 +18,7 @@ from cmap.speedtest_function_linear import clqt_par_speedtest_linear
 jax.config.update("jax_platform_name", "cuda")
 
 
-blocks = jnp.logspace(2, 5, 5, base=10, dtype=jnp.int32)
+blocks = jnp.logspace(2, 5, 8, base=10, dtype=jnp.int32)
 n =10 
 
 
