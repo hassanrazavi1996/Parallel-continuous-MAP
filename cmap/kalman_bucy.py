@@ -50,7 +50,7 @@ def kalman_bucy_filter(F, L, W, H, R, y, steps, dt, t0, P0, m0):
         return dx
 
     def body(carry, t):
-        f = lambda x, t: odes(F, L, W, H, R, y, x, t)
+        f = lambda x, t_: odes(F, L, W, H, R, y, x, t_)
         P, m = carry
         x = pack_Pm(P, m)
         x = euler(f, dt, x, t)
@@ -66,33 +66,75 @@ def kalman_bucy_filter(F, L, W, H, R, y, steps, dt, t0, P0, m0):
     return Ps, ms
 
 
+# def continuous_rts_smoother(Ps_f, ms_f, Fs, Ls, Qs, t_eval, dt):
+
+#     n_steps = len(t_eval)
+#     n = ms_f.shape[1]
+
+#     Ps_s = np.zeros_like(Ps_f)
+#     ms_s = np.zeros_like(ms_f)
+
+#     Ps_s[-1] = Ps_f[-1]
+#     ms_s[-1] = ms_f[-1]
+
+#     for k in reversed(range(n_steps)):
+
+#         P = Ps_f[k]
+#         m = ms_f[k]
+
+#         t = t_eval[k]
+#         F = Fs(t)
+#         L = Ls(t)
+#         Q = Qs(t)
+
+#         G = F + L @ Q @ L.T @ jnp.linalg.solve(P, jnp.eye(n))
+
+#         dm = F @ ms_s[k + 1] + L @ Q @ L.T @ jnp.linalg.solve(P,jnp.eye(n)) @ (ms_s[k + 1] - m)
+#         dP = G @ Ps_s[k + 1] + Ps_s[k + 1] @ G.T - L @ Q @ L.T
+
+#         ms_s[k] = ms_s[k + 1] - dm * dt
+#         Ps_s[k] = Ps_s[k + 1] - dP * dt
+
+#     return ms_s, Ps_s
 def continuous_rts_smoother(Ps_f, ms_f, Fs, Ls, Qs, t_eval, dt):
 
     n_steps = len(t_eval)
     n = ms_f.shape[1]
 
-    Ps_s = np.zeros_like(Ps_f)
-    ms_s = np.zeros_like(ms_f)
+    def f_smoother(x, t, P, m):
+        P_next, m_next = unpack_Pm(x)
 
-    Ps_s[-1] = Ps_f[-1]
-    ms_s[-1] = ms_f[-1]
-
-    for k in reversed(range(n_steps)):
-
-        P = Ps_f[k]
-        m = ms_f[k]
-
-        t = t_eval[k]
         F = Fs(t)
         L = Ls(t)
         Q = Qs(t)
 
         G = F + L @ Q @ L.T @ jnp.linalg.solve(P, jnp.eye(n))
 
-        dm = F @ ms_s[k + 1] + L @ Q @ L.T @ jnp.linalg.solve(P,jnp.eye(n)) @ (ms_s[k + 1] - m)
-        dP = G @ Ps_s[k + 1] + Ps_s[k + 1] @ G.T - L @ Q @ L.T
+        dm = F @ m_next + L @ Q @ L.T @ jnp.linalg.solve(P, jnp.eye(n)) @ (m_next - m)
+        dP = G @ P_next + P_next @ G.T - L @ Q @ L.T
 
-        ms_s[k] = ms_s[k + 1] - dm * dt
-        Ps_s[k] = Ps_s[k + 1] - dP * dt
+        return pack_Pm(dP, dm)
+
+    def body(carry, i):
+        P_next, m_next = carry
+        P = Ps_f[i]
+        m = ms_f[i]
+        t = t_eval[i]
+
+        x_next = pack_Pm(P_next, m_next)
+        f = lambda x, tt: f_smoother(x, tt, P, m)
+        x_prev = euler(f, -dt, x_next, t+dt)   
+
+        P_prev, m_prev = unpack_Pm(x_prev)
+        P_prev = 0.5 * (P_prev + P_prev.T)  
+        return (P_prev, m_prev), (P_prev, m_prev)
+
+    init = (Ps_f[-1], ms_f[-1])
+    xs = jnp.arange(n_steps)
+
+    _, (Ps_s, ms_s) = jax.lax.scan(f=body, init=init, xs=xs, reverse=True)
+
+    Ps_s = jnp.concatenate([Ps_s, Ps_f[-1][None, ...]], axis=0)
+    ms_s = jnp.concatenate([ms_s, ms_f[-1][None, ...]], axis=0)
 
     return ms_s, Ps_s

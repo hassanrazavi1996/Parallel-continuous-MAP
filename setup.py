@@ -5,7 +5,12 @@ setup(
     version="0.0.1",
     author="Hassan Razavi",
     author_email="hassan.razavi@aalto.fi",
-    description="",
-    install_requires=["jax[cuda12]", "matplotlib", "pandas"],
+    description="Continuous MAP estimation ",
+    install_requires=[
+        "jax>=0.4.27",
+        "jaxlib>=0.4.27",
+        "matplotlib",
+        "pandas",
+    ],
     zip_safe=False,
 )

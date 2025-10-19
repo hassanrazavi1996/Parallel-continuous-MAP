@@ -10,4 +10,5 @@ def euler(f: Callable, dt: float, x: jnp.ndarray, t: Optional[float]) -> jnp.nda
 
     dx = f(x, t)* dt
     x_next = x + dx
+    
     return x_next

@@ -35,6 +35,7 @@ def getCLQT(ocp: cmap,steps):
     ])
     L_rev = lambda t: -jnp.array([[0.0, 0.0], [0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
     Q = lambda t: L_rev(t) @ W(t) @ L_rev(t).T
+    
     c_rev = lambda t: -jnp.zeros((4,))
 
     r_rev = lambda t: -jnp.zeros((2,))
