@@ -8,7 +8,6 @@ import jax.numpy as jnp
 import numpy as np
 
 
-
 def pack_Pm(P, m):
 
     m = jnp.expand_dims(m, axis=-1)
@@ -25,7 +24,7 @@ def unpack_Pm(x):
 
 def kalman_bucy_filter(F, L, W, H, R, y, steps, dt, t0, P0, m0):
 
-    Ts = jnp.arange(0,steps, dtype=jnp.float64) * dt
+    Ts = jnp.arange(0, steps, dtype=jnp.float64) * dt
 
     def odes(F, L, W, H, R, y, x, t):
         P, m = unpack_Pm(x)
@@ -66,36 +65,6 @@ def kalman_bucy_filter(F, L, W, H, R, y, steps, dt, t0, P0, m0):
     return Ps, ms
 
 
-# def continuous_rts_smoother(Ps_f, ms_f, Fs, Ls, Qs, t_eval, dt):
-
-#     n_steps = len(t_eval)
-#     n = ms_f.shape[1]
-
-#     Ps_s = np.zeros_like(Ps_f)
-#     ms_s = np.zeros_like(ms_f)
-
-#     Ps_s[-1] = Ps_f[-1]
-#     ms_s[-1] = ms_f[-1]
-
-#     for k in reversed(range(n_steps)):
-
-#         P = Ps_f[k]
-#         m = ms_f[k]
-
-#         t = t_eval[k]
-#         F = Fs(t)
-#         L = Ls(t)
-#         Q = Qs(t)
-
-#         G = F + L @ Q @ L.T @ jnp.linalg.solve(P, jnp.eye(n))
-
-#         dm = F @ ms_s[k + 1] + L @ Q @ L.T @ jnp.linalg.solve(P,jnp.eye(n)) @ (ms_s[k + 1] - m)
-#         dP = G @ Ps_s[k + 1] + Ps_s[k + 1] @ G.T - L @ Q @ L.T
-
-#         ms_s[k] = ms_s[k + 1] - dm * dt
-#         Ps_s[k] = Ps_s[k + 1] - dP * dt
-
-#     return ms_s, Ps_s
 def continuous_rts_smoother(Ps_f, ms_f, Fs, Ls, Qs, t_eval, dt):
 
     n_steps = len(t_eval)
@@ -123,10 +92,10 @@ def continuous_rts_smoother(Ps_f, ms_f, Fs, Ls, Qs, t_eval, dt):
 
         x_next = pack_Pm(P_next, m_next)
         f = lambda x, tt: f_smoother(x, tt, P, m)
-        x_prev = euler(f, -dt, x_next, t+dt)   
+        x_prev = euler(f, -dt, x_next, t + dt)
 
         P_prev, m_prev = unpack_Pm(x_prev)
-        P_prev = 0.5 * (P_prev + P_prev.T)  
+        P_prev = 0.5 * (P_prev + P_prev.T)
         return (P_prev, m_prev), (P_prev, m_prev)
 
     init = (Ps_f[-1], ms_f[-1])

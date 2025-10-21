@@ -1,4 +1,5 @@
 from jax import config
+
 config.update("jax_enable_x64", True)
 import numpy as np
 import jax.numpy as jnp
@@ -41,7 +42,6 @@ def make_cv_data(m0, P0, nsteps=5000, dt=0.01, q=0.2, r=0.01, seed=None):
             Y[k] = y
             T[k + 1] = t
 
-    DY_jax0 = jnp.array(DY,dtype=jnp.float64) / dt
+    DY_jax0 = jnp.array(DY, dtype=jnp.float64) / dt
     DY_jax1 = jnp.flip(DY_jax0, axis=0)
-    return X,DY_jax0,DY_jax1
-
+    return X, DY_jax0, DY_jax1
