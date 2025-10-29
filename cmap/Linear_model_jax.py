@@ -2,7 +2,7 @@ from jax import config
 
 config.update("jax_enable_x64", True)
 import jax.numpy as jnp
-import cmap.clqt_jax as cmap
+import cmap.clqt_jax as clqt_p
 from cmap.Linear_model_data import make_cv_data
 from cmap.con_to_dis import y_reverse
 
@@ -14,7 +14,7 @@ from cmap.con_to_dis import y_reverse
 ###########################################################################
 
 
-def getCLQT(ocp: cmap, steps):
+def getCLQT(steps):
 
     # ######################
     T = 50.0
@@ -54,7 +54,7 @@ def getCLQT(ocp: cmap, steps):
 
     X, y_discrete, y_discrete_rev = make_cv_data(x0, P0(0), steps, dt, q, v, seed=123)
     y_rev = lambda t: y_reverse(t, T, dt, steps, y_discrete)
-    clqt = cmap.CLQT(
+    clqt = clqt_p.CLQT(
         mu, F_rev, Sigma, Q_rev, R_rev, c_rev, H_rev, y_rev, r_rev, T, L_rev, W
     )
 
