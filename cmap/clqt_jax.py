@@ -102,6 +102,7 @@ class CLQT(NamedTuple):
 def riccati_ode_f(ocp: CLQT, x, t):
 
     S, v = unpack_Sv(x)
+    jax.debug.print("S: {S}", S=S)  # Debug print
 
     Q = ocp.Q(t)
 
@@ -115,9 +116,12 @@ def riccati_ode_f(ocp: CLQT, x, t):
 
     I = jnp.eye(R.shape[0])
     R_inv = jax.scipy.linalg.solve(R, I)
+    
+
 
     dS = -F.T @ S - S @ F + S @ Q @ S - H.T @ R_inv @ H
     dv = -H.T @ R_inv @ y + H.T @ R_inv @ r - F.T @ v + S @ Q @ v + S @ c
+
     dx = pack_Sv(dS, dv)
 
     return dx
@@ -138,6 +142,7 @@ def seqBackwardPass(ocp: CLQT, steps, dt, t0, S, v):
         S, v = unpack_Sv(x)
         S = 0.5 * (S + S.T)
         Q = ocp.Q(t)
+
 
         Kx = Q @ S
         d = Q @ v
@@ -200,6 +205,7 @@ def bwpass_bw_ode_f(ocp: CLQT, x, t):
     c = ocp.c(t)
     r = ocp.r(t)
     R = ocp.R(t)
+
 
     I = jnp.eye(R.shape[0])
     R_inv = jnp.linalg.solve(R, I)
