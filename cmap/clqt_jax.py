@@ -9,6 +9,7 @@ import jax.scipy.linalg as jlinalg
 from jax import lax, vmap
 from cmap.diffeq_jax import euler
 from typing import NamedTuple
+from typing import Callable
 
 
 def pack_abcej(A, b, C, eta, J):
@@ -80,18 +81,18 @@ def unpack_Sv(x):
 
 class CLQT(NamedTuple):
 
-    mu: jnp.ndarray
-    F: jnp.ndarray
-    Sigma: jnp.ndarray
-    Q: jnp.ndarray
-    R: jnp.ndarray
-    c: jnp.ndarray
-    H: jnp.ndarray
-    y: jnp.ndarray
-    r: jnp.ndarray
+    vT: jnp.ndarray
+    F: Callable
+    ST: jnp.ndarray
+    Q: Callable
+    R: Callable
+    c: Callable
+    H: Callable
+    y: Callable
+    r: Callable
     T: float
-    L: jnp.ndarray
-    W: jnp.ndarray
+    L: Callable
+    W: Callable
 
 
 ###########################################################################
@@ -102,7 +103,6 @@ class CLQT(NamedTuple):
 def riccati_ode_f(ocp: CLQT, x, t):
 
     S, v = unpack_Sv(x)
-    jax.debug.print("S: {S}", S=S)  # Debug print
 
     Q = ocp.Q(t)
 
@@ -116,6 +116,8 @@ def riccati_ode_f(ocp: CLQT, x, t):
 
     I = jnp.eye(R.shape[0])
     R_inv = jax.scipy.linalg.solve(R, I)
+
+    jax.debug.print("F: {F}", F=F)
     
 
 
@@ -225,7 +227,7 @@ def parBackwardPass_init(ocp: CLQT, blocks, steps, t0, dt):
 
     elems = []
 
-    dim = ocp.Sigma(0).shape[0]
+    dim = ocp.ST.shape[0]
 
     A0 = jnp.eye(dim)
     b0 = jnp.zeros((dim,))
@@ -262,11 +264,11 @@ def parBackwardPass_init(ocp: CLQT, blocks, steps, t0, dt):
 
     (A_blocks, b_blocks, C_blocks, eta_blocks, J_blocks) = jax.vmap(single_pass)(t0s)
 
-    AT = jnp.zeros_like(ocp.Sigma(0))
+    AT = jnp.zeros_like(ocp.ST)
     bT = b0
     CT = C0
-    etaT = ocp.mu
-    JT = ocp.Sigma(0)
+    etaT = ocp.vT
+    JT = ocp.ST
 
     As = jnp.concatenate([A_blocks, AT[None]], axis=0)
     bs = jnp.concatenate([b_blocks, bT[None]], axis=0)

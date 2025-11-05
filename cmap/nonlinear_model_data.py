@@ -29,12 +29,11 @@ def make_ct_data(m0, P0,nsteps=5000,dt=0.01,sigma_v=0.5,sigma_omega=0.01,r_range
 
     for k in range(0, nsteps):
 
-
         dB = rng.standard_normal(3) * np.sqrt(dt)
         w = L @ dB
 
         px, py, vx, vy, omega = x
-
+        
         dp_x = vx
         dp_y = vy
         dv_x = -omega * vy
@@ -49,7 +48,7 @@ def make_ct_data(m0, P0,nsteps=5000,dt=0.01,sigma_v=0.5,sigma_omega=0.01,r_range
         ])
 
         d_eta = np.array([
-            rng.normal(0, r_range *np.sqrt( dt)),
+            rng.normal(0, r_range  *np.sqrt( dt)),
             rng.normal(0, r_bearing*np.sqrt( dt))
         ])
 
