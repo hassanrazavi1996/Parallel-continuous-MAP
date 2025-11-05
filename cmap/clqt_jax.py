@@ -91,8 +91,7 @@ class CLQT(NamedTuple):
     y: Callable
     r: Callable
     T: float
-    L: Callable
-    W: Callable
+
 
 
 ###########################################################################
@@ -116,9 +115,6 @@ def riccati_ode_f(ocp: CLQT, x, t):
 
     I = jnp.eye(R.shape[0])
     R_inv = jax.scipy.linalg.solve(R, I)
-
-    jax.debug.print("F: {F}", F=F)
-    
 
 
     dS = -F.T @ S - S @ F + S @ Q @ S - H.T @ R_inv @ H

@@ -9,6 +9,7 @@ from cmap.con_to_dis import y_reverse
 from cmap.con_to_dis import y
 from cmap.nonlinear_model_data import make_ct_data
 from jax import lax
+from cmap.nonlinear_statespace_ct import f,h
 
 
 def intial_guess(x0, steps):
@@ -53,7 +54,7 @@ def getCLQT_nonlinear(steps):
     W = lambda t: jnp.eye(3)
 
 
-    L_rev = lambda t: jnp.array([
+    L = lambda t:  jnp.array([
         [0.0, 0.0, 0.0],
         [0.0, 0.0, 0.0],
         [sigma_v, 0.0, 0.0],
@@ -63,11 +64,11 @@ def getCLQT_nonlinear(steps):
 
 
 
-    Q = lambda t: L_rev(t) @ W(t) @ L_rev(t).T
+    Q = lambda t: L(t) @ W(t) @ L(t).T
 
-    c_rev = lambda t: -jnp.zeros((5,))
+    c_rev = lambda t: jnp.zeros((5,))
 
-    r_rev = lambda t: -jnp.zeros((2,))
+    r_rev = lambda t: jnp.zeros((2,))
     Q_rev = lambda t: Q(T - t)
 
     R_rev = lambda t: R(T - t)
@@ -85,13 +86,13 @@ def getCLQT_nonlinear(steps):
     Hx_rev = lambda x, t: jnp.array([[1.0, 0.0, 0.0, 0.0,0.0],
                                      [0.0, 1.0, 0.0, 0.0,0.0]])
 
-    _,y_discrete=make_ct_data(x0, P0,steps,dt,sigma_v,sigma_omega,r_range,r_bearing,seed=123)
-    y_rev = lambda t: y_reverse(t, T, dt, steps, y_discrete)
+    X,y=make_ct_data(x0, P0, f, h ,L(0), steps,dt,sigma_v,sigma_omega,r_range,r_bearing,seed=123)
+    y_rev = lambda t: y_reverse(t, T, dt, steps, y)
 
 
-    clqt =  clqt_p.CLQT(vT, Fx_rev, ST, Q_rev, R_rev, c_rev, Hx_rev, y_rev, r_rev, T, L_rev, W)
+    clqt =  clqt_p.CLQT(vT, Fx_rev, ST, Q_rev, R_rev, c_rev, Hx_rev, y_rev, r_rev, T)
 
-    return clqt, x0, P0,sigma_v,sigma_omega,r_range,r_bearing
+    return clqt, x0, P0,sigma_v,sigma_omega,r_range,r_bearing,X,y
 
 
 

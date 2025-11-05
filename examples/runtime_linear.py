@@ -8,7 +8,7 @@ import time
 config.update("jax_enable_x64", True)
 
 from cmap.clqt_jax import CLQT
-from cmap.Linear_model_jax import getCLQT
+from linear_model_clqt import getCLQT
 import matplotlib.pyplot as plt
 import jax.numpy as jnp
 import pandas as pd
