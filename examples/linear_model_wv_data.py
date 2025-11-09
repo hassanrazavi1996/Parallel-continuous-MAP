@@ -14,9 +14,11 @@ def make_wv_data(m0, P0, F, L, H, nsteps, dt, q, r, t0, seed=None):
     X = np.zeros((nsteps, 4))
     Y = np.zeros((nsteps, 2))
     DY = np.zeros((nsteps, 2))
-    X[0] = m0
+    
 
     x = rng.multivariate_normal(m0, P0)
+    X[0]=x
+
     y = np.zeros(2)
     t=t0
 

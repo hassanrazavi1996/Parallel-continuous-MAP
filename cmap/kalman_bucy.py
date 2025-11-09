@@ -24,7 +24,7 @@ def unpack_Pm(x):
 
 def kalman_bucy_filter(F, L, W, H, R, y, steps, dt, t0, P0, m0):
 
-    Ts = jnp.arange(0, steps, dtype=jnp.float64) * dt
+    Ts = jnp.arange(1, steps+1, dtype=jnp.float64) * dt
 
     def odes(F, L, W, H, R, y, x, t):
         P, m = unpack_Pm(x)
@@ -91,7 +91,7 @@ def continuous_rts_smoother(Ps_f, ms_f, Fs, Ls, Qs, t_eval, dt):
         t = t_eval[i]
 
         x_next = pack_Pm(P_next, m_next)
-        f = lambda x, tt: f_smoother(x, tt, P, m)
+        f = lambda x, t: f_smoother(x, t, P, m)
         x_prev = euler(f, -dt, x_next, t + dt)
 
         P_prev, m_prev = unpack_Pm(x_prev)
@@ -99,9 +99,9 @@ def continuous_rts_smoother(Ps_f, ms_f, Fs, Ls, Qs, t_eval, dt):
         return (P_prev, m_prev), (P_prev, m_prev)
 
     init = (Ps_f[-1], ms_f[-1])
-    xs = jnp.arange(n_steps)
+    t_s = jnp.arange(n_steps)
 
-    _, (Ps_s, ms_s) = jax.lax.scan(f=body, init=init, xs=xs, reverse=True)
+    _, (Ps_s, ms_s) = jax.lax.scan(f=body, init=init, xs=t_s, reverse=True)
 
     Ps_s = jnp.concatenate([Ps_s, Ps_f[-1][None, ...]], axis=0)
     ms_s = jnp.concatenate([ms_s, ms_f[-1][None, ...]], axis=0)

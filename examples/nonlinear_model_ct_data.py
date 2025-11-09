@@ -22,7 +22,7 @@ def make_ct_data(m0, P0, f, h, L, nsteps, dt, sigma_v, sigma_omega, r_range, r_b
 
     for k in range(0, nsteps):
 
-        dB = rng.standard_normal(3) * np.sqrt(dt)
+        dB = rng.standard_normal(2) * np.sqrt(dt)
         w = L @ dB
 
         dx=f(x)

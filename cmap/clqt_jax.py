@@ -127,10 +127,10 @@ def riccati_ode_f(ocp: CLQT, x, t):
 
 def seqBackwardPass(ocp: CLQT, steps, dt, t0, S, v):
 
-    Q = ocp.Q(0)
+    Q   = ocp.Q(0)
     KxT = jnp.zeros((Q.shape[-1], Q.shape[-2]), dtype=jnp.float64)
-    dT = jnp.zeros((Q.shape[-1],), dtype=jnp.float64)
-    Ts = dt * jnp.arange(steps, dtype=jnp.float64)
+    dT  = jnp.zeros((Q.shape[-1],), dtype=jnp.float64)
+    Ts  = dt * jnp.arange(steps, dtype=jnp.float64)
 
     def body(carry, t):
         f = lambda x, t: riccati_ode_f(ocp, x, t)
@@ -208,10 +208,10 @@ def bwpass_bw_ode_f(ocp: CLQT, x, t):
     I = jnp.eye(R.shape[0])
     R_inv = jnp.linalg.solve(R, I)
 
-    dA = A @ Q @ J - A @ F
+    dA =  A @ Q @ J - A @ F
     db = -A @ Q @ eta - A @ c
     dC = -A @ Q @ A.T
-    deta = -H.T @ R_inv @ y + -H.T @ R_inv @ r + J @ Q @ eta - F.T @ eta + J @ c
+    deta = -H.T @ R_inv @ y + H.T @ R_inv @ r + J @ Q @ eta - F.T @ eta + J @ c
     dJ = -H.T @ R_inv @ H + J @ Q @ J - J @ F - F.T @ J
 
     dx = pack_abcej(dA, db, dC, deta, dJ)

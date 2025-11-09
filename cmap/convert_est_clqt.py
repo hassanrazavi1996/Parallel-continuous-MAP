@@ -4,7 +4,7 @@ config.update("jax_enable_x64",True)
 
 import jax.numpy as jnp
 from cmap.linear_estimation_problem import Estimation
-from cmap.con_to_dis import y_reverse
+from cmap.con_to_dis import f_convert
 
 def est_to_clqt(est:Estimation,steps_all):
 
@@ -16,9 +16,9 @@ def est_to_clqt(est:Estimation,steps_all):
     Q_est = lambda t:  est.L(t)@est.W(t)@est.L(t).T
     Q     = lambda t: Q_est(T-t)
     R     = lambda t: est.R(t)
-    y     = est.y 
+    y     = est.y
 
-    y_rev = lambda t: y_reverse(t, T, T/steps_all, steps_all, y)
+    y_rev = lambda t: f_convert(t, T/steps_all, steps_all, y[::-1])
     
     ST = jnp.linalg.solve(est.P0,jnp.eye(len(est.x0)))
     vT = jnp.linalg.solve(est.P0,est.x0) 
