@@ -14,19 +14,6 @@ def intial_guess(x0, steps):
     return x, u
 
 
-# def simulate(x0,f,steps,dt):
-#     x_seq=jnp.zeros((steps, x0.shape[0]))
-
-#     def step(x,t):
-#         x_new=x+f(x)*dt
-#         return x_new, x_new
-    
-#     Ts=jnp.arange(steps)*dt
-#     _,x_seq=lax.scan(step, x0,Ts)
-
-#     x_seq = jnp.vstack([x0, x_seq])[::-1]
-#     return x_seq
-
 def simulate(x0, f, u_seq, steps, dt):
     
     def step(x, t_u):

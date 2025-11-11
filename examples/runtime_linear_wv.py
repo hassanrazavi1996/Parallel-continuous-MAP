@@ -1,26 +1,54 @@
 import jax
 import jax.numpy as jnp
 from jax import config
-
-
+import matplotlib.pyplot as plt
+import pandas as pd
 import time
 
 config.update("jax_enable_x64", True)
 
-from cmap.clqt_jax import CLQT
-from linear_model_clqt import getCLQT
-import matplotlib.pyplot as plt
-import jax.numpy as jnp
-import pandas as pd
 
+from linear_model_wv_data import make_wv_data 
+from cmap.linear_estimation_problem import Estimation
+from cmap.convert_est_clqt import est_to_clqt
+from cmap.clqt_jax import CLQT
 from cmap.speedtest_function_linear import clqt_seq_speedtest_linear
 from cmap.speedtest_function_linear import clqt_par_speedtest_linear
+from cmap.linear_estimation_problem import Estimation
 
 jax.config.update("jax_platform_name", "cuda")
 
 
 blocks = jnp.logspace(2, 5, 8, base=10, dtype=jnp.int32)
 n = 10
+
+
+T = 1.0
+q = 0.2
+v = 0.001
+p0 = 0.01
+
+t0=0.0
+
+W = lambda t: q * jnp.eye(2)
+H  = lambda t: jnp.array([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]])
+R  = lambda t: v * jnp.eye(2)
+P0 = p0 * jnp.eye(4)
+
+F = lambda t: jnp.array(
+        [
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+            [0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0],
+        ])
+
+L = lambda t: jnp.array([[0.0, 0.0], [0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
+Q = lambda t: L(t) @ W(t) @ L(t).T
+
+c = lambda t: jnp.zeros((4,))
+r = lambda t: jnp.zeros((2,))
+x0 = jnp.array([5.0, 5.0, 0.0, 0.0])
 
 
 par_time_means = []
@@ -31,7 +59,14 @@ for i in range(0, len(blocks)):
     block = blocks[i]
 
     steps_all = n * blocks[i]
-    clqt, x0, P0, q, v = getCLQT(CLQT, steps_all)
+    _, y_discrete, _ = make_wv_data(x0, P0, F(0), L(0), H(0), steps_all, dt, q, v, t0, seed=123)
+ 
+    est= Estimation( F, H, c, r, L, W, R, y_discrete, P0, x0, T)
+
+    F_cl,H_cl,c_cl,r_cl,Q_cl,R_cl,T_cl,ST_cl,vT_cl,y_cl=est_to_clqt(est,steps_all)
+    clqt = CLQT(vT_cl, F_cl, ST_cl, Q_cl, R_cl, c_cl, H_cl, y_cl, r_cl, T_cl)
+
+
     t0 = 0.0
     sigma = clqt.Sigma(0)
     mu = clqt.mu
@@ -56,7 +91,6 @@ for i in range(0, len(blocks)):
         end_time = time.time()
         seq_time = end_time - start_time
 
-        start_time = time.time()
 
         start_time = time.time()
         _, _ = jit_fun2(t0, dt)
