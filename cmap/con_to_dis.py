@@ -8,7 +8,7 @@ import jax.numpy as jnp
 def y(t, dt, nsteps, y_dis):
 
     t = jnp.asarray(t)
-    k = (t / (dt - 1e-10)).astype(jnp.int32)
+    k = (t / (dt - 1e-20)).astype(jnp.int32)
     k = jnp.clip(k, 0, nsteps - 1)
     y_vals = jnp.take(y_dis, k, axis=0)
     y_vals = jnp.where(jnp.ndim(t) == 0, y_vals, y_vals.T)
@@ -27,7 +27,7 @@ def y_reverse( t, tf, dt, nsteps, y_dis):
 def f_convert(t, dt, nsteps, x_dis):
 
     t = jnp.asarray(t)
-    k = (t / (dt - 1e-10)).astype(jnp.int32)
+    k = (t / (dt - 1e-20)).astype(jnp.int32)
     k = jnp.clip(k, 0, nsteps - 1)
     x_vals = jnp.take(x_dis, k, axis=0)
     x_vals = jnp.where(jnp.ndim(t) == 0, x_vals, x_vals.T)
