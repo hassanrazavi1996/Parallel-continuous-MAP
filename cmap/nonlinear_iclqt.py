@@ -24,7 +24,7 @@ def linearize(clqt,steps,f,h,u,x):
    
    clqt = clqt._replace(
     F=lambda t: -Fx_rev(x_con(t)),
-    c=lambda t: -f(x_con(t)) + Fx_rev(x_con(t)) @ x_con(t)+ u_con(t),
+    c=lambda t: -f(x_con(t)) + Fx_rev(x_con(t)) @ x_con(t),#+ u_con(t),
     H=lambda t: Hx_rev(x_con(t)),
     r=lambda t: h(x_con(t)) - Hx_rev(x_con(t)) @ x_con(t)) 
    
@@ -32,15 +32,13 @@ def linearize(clqt,steps,f,h,u,x):
    
 
 def seq_iterate(clqt,steps,blocks,f,h,u,x,t0):
-   
-   clqt,_,_=linearize(clqt,steps*blocks,f,h,u,x)
+   steps_all=steps*blocks
+   clqt,_,_=linearize(clqt,steps_all,f,h,u,x)
    dt=clqt.T/(steps*blocks)
    vT = clqt.vT
    ST = clqt.ST
-
-   T  = clqt.T
    
-   S_seq, v_seq, Kx_seq, d_seq = seqBackwardPass(clqt,steps*blocks,dt,t0,ST,vT)
+   S_seq, v_seq, Kx_seq, d_seq = seqBackwardPass(clqt,steps_all,dt,t0,ST,vT)
    phi0= jnp.linalg.solve(S_seq[0] ,v_seq[0])
    x_seq,u_seq = seqForwardPass(clqt, dt, t0, phi0, Kx_seq, d_seq,u_zoh=False)
    

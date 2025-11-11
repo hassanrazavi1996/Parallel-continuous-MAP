@@ -6,7 +6,7 @@ from jax import lax
 
 
 def intial_guess(x0, steps):
-    x = jnp.full((steps, len(x0)), 0.1)
+    x = jnp.full((steps+1, len(x0)), 0.1)
     # u = jnp.full((steps, len(x0)), 0.2)
     u = jnp.tile(jnp.array([0.0,0.0,0.01,0.01,0.0]), (steps, 1))
 

@@ -17,14 +17,13 @@ from cmap.initial_guess_nonlinear import simulate
 
 from nonlinear_model_ct_data import make_ct_data
 from nonlinear_statespace_ct import f,h
-jax.config.update("jax_platform_name", "cuda")
+# jax.config.update("jax_platform_name", "cuda")
 
 
 
 ######
-blocks = jnp.logspace(2, 3, 3, base=10, dtype=jnp.int32)
+blocks = jnp.logspace(2, 3, 3, base=10).astype(jnp.int32)
 n = 10
-
 
 par_time_means = []
 seq_time_means = []
@@ -72,44 +71,43 @@ niter=10
 
 for i in range (0,len(blocks)):
 
-    block=blocks[i]
+    block=int(blocks[i])
 
-    steps_all=n*blocks[i]
-    
-    
+    steps_all=n*block
+
+    dt=T/steps_all
+
+    _,y_discrete=make_ct_data(x0, P0, f, h ,L(0), steps_all,dt,sigma_v,sigma_omega,r_range,r_bearing,seed=123)
+    est= Estimation( F, H, c, r, L, W, R, y_discrete, P0, x0, T)
     
     F_cl,H_cl,c_cl,r_cl,Q_cl,R_cl,T_cl,ST_cl,vT_cl,y_cl=est_to_clqt(est,steps_all)
     clqt = CLQT(vT_cl, F_cl, ST_cl, Q_cl, R_cl, c_cl, H_cl, y_cl, r_cl, T_cl)
 
-    _,y_discrete=make_ct_data(x0, P0, f, h ,L(0), steps_all,dt,sigma_v,sigma_omega,r_range,r_bearing,seed=123)
-    est= Estimation( F, H, c, r, L, W, R, y_discrete, P0, x0, T)
+    
 
-
-
-    _,u=intial_guess(x0,steps_all)
+    x,u=intial_guess(x0,steps_all)
     dt= T/steps_all
-    x=simulate(x0,f,u,steps_all,dt)
     
-    seq_jit = lambda t0, f, h, u, x, niter: clqt_seq_speedtest_nonlinear(clqt, n, block, f , h, u, x, t0, niter)
+    seq_jit = lambda  u, x, t0: clqt_seq_speedtest_nonlinear(clqt, n, block, f , h, u, x, t0, niter)
     jit_fun1 = jax.jit(seq_jit)
-    _, _ = jit_fun1(t0, f, h, u, x)
+    _, _ = jit_fun1(u, x, t0)
     
-    par_jit = lambda t0, f, h, u, x, niter: clqt_par_speedtest_nonlinear(clqt, n, block, f, h, u, x, t0, niter)
+    par_jit = lambda  u, x, t0: clqt_par_speedtest_nonlinear(clqt, n, block, f, h, u, x, t0, niter)
     jit_fun2 = jax.jit(par_jit)
-    _, _ = jit_fun2(t0, f, h, u, x)
+    _, _ = jit_fun2(u, x, t0)
 
     par_time_array = []
     seq_time_array = []
 
     for _ in range(10):
         start_time = time.time()
-        _, _ = jit_fun1(t0, dt, f, h, u, x)
+        _, _ = jit_fun1( u, x, t0)
         end_time = time.time()
         seq_time = end_time - start_time
 
 
         start_time = time.time()
-        _, _ = jit_fun2(t0, dt, f, h, u, x)
+        _, _ = jit_fun2( u, x, t0)
         end_time = time.time()
         par_time = end_time - start_time
 
@@ -129,14 +127,14 @@ df_mean_seq = pd.DataFrame(seq_time_means_arr)
 
 
 df_mean_par.to_csv("partime_nonlinear_ct.csv")
-df_mean_seq.to_csv("seqtime_notlinearcase_ct.csv")
+df_mean_seq.to_csv("seqtime_notlinear_ct.csv")
 
 
-plt.plot(blocks, par_time_means_arr, label="Parallel Backward Pass", marker="o")
+plt.plot(blocks, par_time_means_arr, label="Parallel method", marker="o")
 plt.plot(
     blocks,
     seq_time_means_arr,
-    label="Sequential Backward Pass",
+    label="Sequential method",
     linestyle="--",
     marker="x")
 plt.xscale("log")
