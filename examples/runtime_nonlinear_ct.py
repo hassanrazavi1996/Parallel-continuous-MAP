@@ -22,7 +22,7 @@ jax.config.update("jax_platform_name", "cuda")
 
 
 ######
-blocks = jnp.logspace(2, 3, 3, base=10).astype(jnp.int32)
+blocks = jnp.logspace(2, 5, 8, base=10).astype(jnp.int32)
 n = 10
 
 par_time_means = []
