@@ -12,11 +12,10 @@ from cmap.clqt_jax import parForwardPass
 
 
 
-def linearize(clqt,steps,f,h,u,x):
+def linearize(clqt,steps,f,h,x):
 
    dt=clqt.T/steps 
    x_con=lambda t:f_convert(t, dt, steps, x)
-   u_con=lambda t:f_convert(t, dt, steps, u)
 
    Fx_rev = lambda x: jax.jacfwd(f)(x)
    Hx_rev = lambda x: jax.jacfwd(h)(x)
@@ -24,16 +23,16 @@ def linearize(clqt,steps,f,h,u,x):
    
    clqt = clqt._replace(
     F=lambda t: -Fx_rev(x_con(t)),
-    c=lambda t: -f(x_con(t)) + Fx_rev(x_con(t)) @ x_con(t),#+ u_con(t),
+    c=lambda t: -f(x_con(t)) + Fx_rev(x_con(t)) @ x_con(t),
     H=lambda t: Hx_rev(x_con(t)),
     r=lambda t: h(x_con(t)) - Hx_rev(x_con(t)) @ x_con(t)) 
    
-   return clqt,x_con,u_con
+   return clqt,x_con
    
 
-def seq_iterate(clqt,steps,blocks,f,h,u,x,t0):
+def seq_iterate(clqt,steps,blocks,f,h,x,t0):
    steps_all=steps*blocks
-   clqt,_,_=linearize(clqt,steps_all,f,h,u,x)
+   clqt,_=linearize(clqt,steps_all,f,h,x)
    dt=clqt.T/(steps*blocks)
    vT = clqt.vT
    ST = clqt.ST
@@ -42,20 +41,20 @@ def seq_iterate(clqt,steps,blocks,f,h,u,x,t0):
    phi0= jnp.linalg.solve(S_seq[0] ,v_seq[0])
    x_seq,u_seq = seqForwardPass(clqt, dt, t0, phi0, Kx_seq, d_seq,u_zoh=False)
    
-   return u_seq , x_seq 
+   return x_seq 
 
 
 
-def par_iterate(clqt,steps,blocks,f,h,u,x,t0):
+def par_iterate(clqt,steps,blocks,f,h,x,t0):
    
-   clqt,_,_=linearize(clqt,steps*blocks,f,h,u,x)
+   clqt,_=linearize(clqt,steps*blocks,f,h,x)
    dt=clqt.T/(steps*blocks)
 
    Kx_par, d_par, S_par, v_par = parBackwardPass(clqt,blocks,steps,t0,dt)
    phi0= jnp.linalg.solve(S_par[0] ,v_par[0])
    u_par,x_par =parForwardPass(clqt, phi0, Kx_par, d_par, blocks, steps,dt,t0,u_zoh=False)
 
-   return u_par , x_par
+   return  x_par
    
    
 

@@ -26,19 +26,19 @@ r= lambda t: 1
 T= 1
 
 clqt=CLQT(vT,F,ST,Q,R,c,H,y,r,T)
-u=jnp.array([[2.0,3.0,4.0],[0.4,0.5,0.6]]).T
+# u=jnp.array([[2.0,3.0,4.0],[0.4,0.5,0.6]]).T
 x=jnp.array([[1.0,1.0,1.0],[0.4,0.5,0.6]]).T
 
 def test_linearize():
     steps=len(x)
-    clqt_new,x_con,u_con=linearize(clqt,steps,f,h,u,x)
+    clqt_new,x_con=linearize(clqt,steps,f,h,x)
 
     Fx=lambda x: jnp.array([[-2*x[0],0.0],[0.0,-2*x[1]]])
     Hx=lambda x: jnp.array([[jnp.cos(x[0]),0.0],[0.0,-jnp.sin(x[1])]])
     
     t_r=0.2
     
-    c= -f(x_con(t_r))-Fx(x_con(t_r))@x_con(t_r)+u_con(t_r)
+    c= -f(x_con(t_r))-Fx(x_con(t_r))@x_con(t_r)
     r=  h(x_con(t_r))-Hx(x_con(t_r))@x_con(t_r)
     
     assert jnp.allclose(Fx(x_con(t_r)),clqt_new.F(t_r))

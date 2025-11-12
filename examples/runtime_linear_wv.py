@@ -16,10 +16,10 @@ from cmap.speedtest_function_linear import clqt_seq_speedtest_linear
 from cmap.speedtest_function_linear import clqt_par_speedtest_linear
 from cmap.linear_estimation_problem import Estimation
 
-# jax.config.update("jax_platform_name", "cuda")
+jax.config.update("jax_platform_name", "cuda")
 
 
-blocks = jnp.logspace(2, 3, 3, base=10, dtype=jnp.int32)
+blocks = jnp.logspace(2, 5, 8, base=10, dtype=jnp.int32)
 n = 10
 
 
