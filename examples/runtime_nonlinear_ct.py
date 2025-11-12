@@ -22,7 +22,7 @@ jax.config.update("jax_platform_name", "cuda")
 
 
 ######
-blocks = jnp.logspace(2, 5, 8, base=10).astype(jnp.int32)
+blocks = jnp.logspace(2, 3, 3, base=10).astype(jnp.int32)
 n = 10
 
 par_time_means = []
@@ -88,26 +88,26 @@ for i in range (0,len(blocks)):
     x,u=intial_guess(x0,steps_all)
     dt= T/steps_all
     
-    seq_jit = lambda  u, x, t0: clqt_seq_speedtest_nonlinear(clqt, n, block, f , h, u, x, t0, niter)
+    seq_jit = lambda x, t0: clqt_seq_speedtest_nonlinear(clqt, n, block, f , h, x, t0, niter)
     jit_fun1 = jax.jit(seq_jit)
-    _, _ = jit_fun1(u, x, t0)
+    _ = jit_fun1( x, t0)
     
-    par_jit = lambda  u, x, t0: clqt_par_speedtest_nonlinear(clqt, n, block, f, h, u, x, t0, niter)
+    par_jit = lambda  x, t0: clqt_par_speedtest_nonlinear(clqt, n, block, f, h, x, t0, niter)
     jit_fun2 = jax.jit(par_jit)
-    _, _ = jit_fun2(u, x, t0)
+    _ = jit_fun2(x, t0)
 
     par_time_array = []
     seq_time_array = []
 
-    for _ in range(10):
+    for _ in range(5):
         start_time = time.time()
-        _, _ = jit_fun1( u, x, t0)
+        _ = jit_fun1( x, t0)
         end_time = time.time()
         seq_time = end_time - start_time
 
 
         start_time = time.time()
-        _, _ = jit_fun2( u, x, t0)
+        _ = jit_fun2( x, t0)
         end_time = time.time()
         par_time = end_time - start_time
 
