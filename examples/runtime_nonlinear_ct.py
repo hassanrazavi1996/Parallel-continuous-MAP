@@ -126,17 +126,12 @@ df_mean_par = pd.DataFrame(par_time_means_arr)
 df_mean_seq = pd.DataFrame(seq_time_means_arr)
 
 
-df_mean_par.to_csv("partime_nonlinear_ct.csv")
-df_mean_seq.to_csv("seqtime_notlinear_ct.csv")
+df_mean_par.to_csv("par_time_nonlinear_ct.csv")
+df_mean_seq.to_csv("seq_time_nonlinear_ct.csv")
 
 
 plt.plot(blocks, par_time_means_arr, label="Parallel method", marker="o")
-plt.plot(
-    blocks,
-    seq_time_means_arr,
-    label="Sequential method",
-    linestyle="--",
-    marker="x")
+plt.plot(blocks,seq_time_means_arr,label="Sequential method",linestyle="--",marker="x")
 plt.xscale("log")
 plt.yscale("log")
 plt.legend()

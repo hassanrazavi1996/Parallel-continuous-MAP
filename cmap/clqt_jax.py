@@ -132,7 +132,7 @@ def seqBackwardPass(ocp: CLQT, steps, dt, t0, S, v):
     dT  = jnp.zeros((Q.shape[-1],), dtype=jnp.float64)
     Ts  = dt * jnp.arange(steps, dtype=jnp.float64)
 
-    def body(carry, t):
+    def step(carry, t):
         f = lambda x, t: riccati_ode_f(ocp, x, t)
         S, v, _, _ = carry
         x = pack_Sv(S, v)
@@ -147,7 +147,7 @@ def seqBackwardPass(ocp: CLQT, steps, dt, t0, S, v):
         return (S, v, Kx, d), (S, v, Kx, d)
 
     _, (Ss, vs, Kxs, ds) = jax.lax.scan(
-        f=body, init=(S, v, KxT, dT), xs=(t0 + Ts), reverse=True
+        f=step, init=(S, v, KxT, dT), xs=(t0 + Ts), reverse=True
     )
 
     Ss = jnp.concatenate([Ss, S[None, ...]], axis=0)
@@ -184,6 +184,76 @@ def seqForwardPass(ocp, dt, t_start, x0, Kx_block, d_block, u_zoh=False):
     # us = jnp.concatenate([u[None, :], us_next], axis=0)
 
     return xs, us
+
+
+
+def FwdBwdPass_odes(clqt,x,t):
+
+    A,b,C=unpack_abc(x)
+
+    F=clqt.F(t)
+    H=clqt.H(t)
+
+    r=clqt.r(t)
+    c=clqt.c(t)
+
+    y=clqt.y(t)
+
+    R=clqt.R(t)
+    Q=clqt.Q(t)
+
+
+    I=jnp.eye(R.shape[0])
+    R_inv=jnp.linalg.solve(R, I)
+    
+    dA =  F @ A - C @ H.T @ R_inv @ H
+    db =  C @ H.T @ R_inv @ (y - r) + F @ b + c
+    dC = -C @ H.T @ R_inv @ H @ C + Q - F @ C + C @ F.T
+
+    dx=pack_abc(dA,db,dC)
+
+    return dx
+
+
+
+def seqFwdBwdPass(clqt,dt,t0,steps,A,b,C):
+    
+    def step(carry,t):
+
+        A, b, C=carry
+        f = lambda x,t: FwdBwdPass_odes(clqt,x,t)
+        x = pack_abc(A,b,C)
+
+        x = euler(f,dt,x,t)
+
+        A,b,C = unpack_abc(x)
+        C = 0.5*(C+C.T)
+
+        return (A,b,C),(A,b,C)
+    
+    Ts= t0 + jnp.arange(steps, dtype=jnp.float64)*dt
+    _, (As,bs,Cs)=lax.scan(step,(A,b,C),t0+Ts)
+
+    return As,bs,Cs
+
+def combine_seqFwdBwdPass( S, K, v, d, A, b, C):
+
+    I = jnp.eye(C.shape[-1],dtype=jnp.float64)
+
+    def single(carry):
+
+        S,K,v,d,A,b,C=carry
+
+        x = jnp.linalg.solve(I + C @ S, b + C @ v)
+        u = -K @ x + d
+
+        return ( u, x)
+    
+    elems = (S, K, v, d, A, b, C)
+    (us,xs) = jax.vmap(single)(elems)
+
+    return us, xs
+
 
 
 ###########################################################################
