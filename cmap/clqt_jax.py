@@ -605,11 +605,11 @@ def parFwdBwdPass_init(ocp:CLQT,x0,blocks,steps,dt,t0):
     (A_blocks, b_blocks, C_blocks, eta_blocks, J_blocks) = jax.vmap(single_pass)(t0s)
 
     
-    A0 = jnp.zeros((dim,dim))
+    A0 = jnp.zeros((dim, dim))
     b0 = x0
     C0 = jnp.zeros((dim, dim))
     eta0 = jnp.zeros((dim,))
-    J0 = jnp.zeros((dim, dim))
+    J0 = jnp.zeros((dim,dim))
 
 
     As = jnp.concatenate([A0[None],A_blocks], axis=0)
@@ -617,8 +617,8 @@ def parFwdBwdPass_init(ocp:CLQT,x0,blocks,steps,dt,t0):
     Cs = jnp.concatenate([C0[None],C_blocks], axis=0)
     etas = jnp.concatenate([eta0[None],eta_blocks], axis=0)
     Js = jnp.concatenate([J0[None],J_blocks], axis=0)
-    
 
+    
     elems = (As, bs, Cs, etas, Js)
 
     return elems
@@ -628,14 +628,10 @@ def parFwdBwdPass_init(ocp:CLQT,x0,blocks,steps,dt,t0):
 def parFwdBwdPass_extract(ocp:CLQT, K, d, S, v, elems, steps, dt, t0):
     
     As, bs, Cs, etas, Js = elems
-    blocks = Js.shape[0] - 1
+    blocks = As.shape[0] - 1
 
-    t0s = (
-        jnp.array(t0, dtype=jnp.float64)
-        + jnp.arange(0, blocks, dtype=jnp.float64) * steps * dt
-    )
-
-    jax.debug.print("As shape: {}", As.shape)
+    t0s = t0+ jnp.arange(0, blocks, dtype=jnp.float64) * steps * dt
+   
 
     A_blocks =As[:-1]
     b_blocks =bs[:-1]
@@ -661,9 +657,9 @@ def parFwdBwdPass_extract(ocp:CLQT, K, d, S, v, elems, steps, dt, t0):
     bc = jnp.reshape(bs_all,(-1, bs_all.shape[-1]))
     Cc = jnp.reshape(Cs_all,(-1, Cs_all.shape[-2], Cs_all.shape[-1]))
 
-    As_all = jnp.concatenate([Ac, AT[None, ...]], axis=0)
-    bs_all = jnp.concatenate([bc, bT[None, ...]], axis=0)
-    Cs_all = jnp.concatenate([Cc, CT[None, ...]], axis=0)
+    As_all = jnp.concatenate([Ac, AT[None, ...]], axis=0)[::-1]
+    bs_all = jnp.concatenate([bc, bT[None, ...]], axis=0)[::-1]
+    Cs_all = jnp.concatenate([Cc, CT[None, ...]], axis=0)[::-1]
 
     return combine_seqFwdBwdPass(S=S, K=K, v=v, d=d, A=As_all, b=bs_all, C=Cs_all)
 
@@ -675,7 +671,7 @@ def par_fwdbwd_pass_scan(elems):
 
 
 def parFwdBwdPass(ocp:CLQT, x0, K, d, S, v, blocks, steps, dt, t0): 
-
-    elems = parFwdBwdPass_init(ocp, x0, blocks, steps, dt, t0)
+    
+    elems = parFwdBwdPass_init(ocp,x0, blocks, steps, dt, t0)
     elems = par_fwdbwd_pass_scan(elems)
     return parFwdBwdPass_extract(ocp, K, d, S, v, elems, steps, dt, t0)     
