@@ -657,9 +657,9 @@ def parFwdBwdPass_extract(ocp:CLQT, K, d, S, v, elems, steps, dt, t0):
     bc = jnp.reshape(bs_all,(-1, bs_all.shape[-1]))
     Cc = jnp.reshape(Cs_all,(-1, Cs_all.shape[-2], Cs_all.shape[-1]))
 
-    As_all = jnp.concatenate([Ac, AT[None, ...]], axis=0)[::-1]
-    bs_all = jnp.concatenate([bc, bT[None, ...]], axis=0)[::-1]
-    Cs_all = jnp.concatenate([Cc, CT[None, ...]], axis=0)[::-1]
+    As_all = jnp.concatenate([Ac, AT[None, ...]], axis=0)
+    bs_all = jnp.concatenate([bc, bT[None, ...]], axis=0)
+    Cs_all = jnp.concatenate([Cc, CT[None, ...]], axis=0)
 
     return combine_seqFwdBwdPass(S=S, K=K, v=v, d=d, A=As_all, b=bs_all, C=Cs_all)
 
