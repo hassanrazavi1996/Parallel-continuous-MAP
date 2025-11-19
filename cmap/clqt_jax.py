@@ -31,6 +31,8 @@ def unpack_abcej(x):
     return A, b, C, eta, J
 
 
+
+
 def pack_Psiphi(Psi, phi):
 
     phi = jnp.expand_dims(phi, axis=-1)
@@ -114,7 +116,7 @@ def riccati_ode_f(ocp: CLQT, x, t):
     y = ocp.y(t)
 
     I = jnp.eye(R.shape[0])
-    R_inv = jax.scipy.linalg.solve(R, I)
+    R_inv = jlinalg.solve(R, I)
 
 
     dS = -F.T @ S - S @ F + S @ Q @ S - H.T @ R_inv @ H
@@ -146,7 +148,7 @@ def seqBackwardPass(ocp: CLQT, steps, dt, t0, S, v):
 
         return (S, v, Kx, d), (S, v, Kx, d)
 
-    _, (Ss, vs, Kxs, ds) = jax.lax.scan(
+    _, (Ss, vs, Kxs, ds) = lax.scan(
         f=step, init=(S, v, KxT, dT), xs=(t0 + Ts), reverse=True
     )
 
@@ -171,7 +173,7 @@ def seqForwardPass(ocp:CLQT, dt, t_start, x0, Kx_block, d_block, u_zoh=False):
         def dynamics_no_zoh(x, t):
             return ocp.F(t) @ x + (-Kx @ x + d) + ocp.c(t)
 
-        f = lambda x, t: jax.lax.cond(
+        f = lambda x, t: lax.cond(
             u_zoh, lambda _: dynamics_zoh(x, t), lambda _: dynamics_no_zoh(x, t), None
         )
 
@@ -179,7 +181,7 @@ def seqForwardPass(ocp:CLQT, dt, t_start, x0, Kx_block, d_block, u_zoh=False):
         return x_next, (u, x_next)
 
     scan_inputs = (times, Kx_block, d_block)
-    _, (us, xs_next) = jax.lax.scan(step, x0, scan_inputs, reverse=False)
+    _, (us, xs_next) = lax.scan(step, x0, scan_inputs, reverse=False)
     xs = jnp.concatenate([x0[None, :], xs_next], axis=0)
 
     return xs, us
@@ -188,7 +190,7 @@ def seqForwardPass(ocp:CLQT, dt, t_start, x0, Kx_block, d_block, u_zoh=False):
 
 def FwdBwdPass_odes(ocp:CLQT,x,t):
 
-    A,b,C=unpack_abc(x)
+    A, b, C = unpack_abc(x)
 
     F=ocp.F(t)
     H=ocp.H(t)
@@ -203,7 +205,7 @@ def FwdBwdPass_odes(ocp:CLQT,x,t):
 
 
     I=jnp.eye(R.shape[0])
-    R_inv=jnp.linalg.solve(R, I)
+    R_inv=jlinalg.solve(R, I)
     
     dA =  F @ A - C @ H.T @ R_inv @ H @ A
     db =  C @ H.T @ R_inv @ (y - r) - C @ H.T @ R_inv @ H @ b + F @ b + c
@@ -240,16 +242,22 @@ def seqFwdBwdPass(ocp:CLQT,steps,dt,t0,A,b,C):
     return As, bs, Cs
 
 
-
 def combine_seqFwdBwdPass(S, K, v, d, A, b, C):
-    I = jnp.eye(C.shape[-1], dtype=jnp.float64)
 
-    mat = I + jnp.einsum("bij,bjk->bik", C, S)  
-    rhs = b + jnp.einsum("bij,bj->bi", C, v)     
+    d_x = C.shape[-1]      
 
-    xs = jnp.linalg.solve(mat, rhs[..., None])[..., 0]
+    I = jnp.eye(d_x)
 
-    us = -jnp.einsum("bij,bj->bi", K, xs[:-1]) + d
+    def solve_x(S_i, v_i, b_i, C_i):
+
+        term1 = I + C_i @ S_i       
+        term2 = b_i + C_i @ v_i     
+        x = jlinalg.solve(term1, term2)
+        return x
+
+    xs = jax.vmap(solve_x)(S, v, b, C) 
+    xs_for_u = xs[:-1]                 
+    us = - jnp.einsum("bij,bj->bi", K, xs_for_u) + d
 
     return us, xs
 
@@ -261,7 +269,6 @@ def combine_seqFwdBwdPass(S, K, v, d, A, b, C):
 
 def bwpass_bw_ode_f(ocp: CLQT, x, t):
 
-    Q = ocp.Q(t)
 
     A, b, C, eta, J = unpack_abcej(x)
 
@@ -271,10 +278,12 @@ def bwpass_bw_ode_f(ocp: CLQT, x, t):
     c = ocp.c(t)
     r = ocp.r(t)
     R = ocp.R(t)
+    Q = ocp.Q(t)
+
 
 
     I = jnp.eye(R.shape[0])
-    R_inv = jnp.linalg.solve(R, I)
+    R_inv = jlinalg.solve(R, I)
 
     dA =  A @ Q @ J - A @ F
     db = -A @ Q @ eta - A @ c
@@ -317,7 +326,7 @@ def parBackwardPass_init(ocp: CLQT, blocks, steps, t0, dt):
     def single_pass(_t0):
 
         _, (As, bs, Cs, etas, Js) = lax.scan(
-            step_backward, (A0, b0, C0, eta0, J0), _t0 + Ts, reverse=True
+            f=step_backward, init=(A0, b0, C0, eta0, J0),xs=( _t0 + Ts), reverse=True
         )
 
         A1, b1, C1, eta1, J1 = As[0], bs[0], Cs[0], etas[0], Js[0]
@@ -326,7 +335,7 @@ def parBackwardPass_init(ocp: CLQT, blocks, steps, t0, dt):
 
     t0s = t0 + jnp.arange(0, blocks, dtype=jnp.float64) * steps * dt
 
-    (A_blocks, b_blocks, C_blocks, eta_blocks, J_blocks) = jax.vmap(single_pass)(t0s)
+    (A_blocks, b_blocks, C_blocks, eta_blocks, J_blocks) = vmap(single_pass)(t0s)
 
     AT = jnp.zeros_like(ocp.ST)
     bT = b0
@@ -349,7 +358,7 @@ def parBackwardPass_extract(ocp: CLQT, elems, steps, dt, t0):
 
     As, bs, Cs, etas, Js = elems
     blocks = Js.shape[0] - 1
-
+    
     t0s = (
         jnp.array(t0, dtype=jnp.float64)
         + jnp.arange(0, blocks, dtype=jnp.float64) * steps * dt
@@ -362,7 +371,7 @@ def parBackwardPass_extract(ocp: CLQT, elems, steps, dt, t0):
         (Ss, vs, Kxs, ds) = seqBackwardPass(ocp, steps, dt=dt, t0=t0_i, S=J_i, v=eta_i)
         return (Ss, vs, Kxs, ds), (Ss, vs, Kxs, ds)
 
-    _, (Ss, vs, Kxs, ds) = jax.vmap(batched_seq_pass)(t0s, J_blocks, eta_blocks)
+    _, (Ss, vs, Kxs, ds) = vmap(batched_seq_pass)(t0s, J_blocks, eta_blocks)
 
     Ss = Ss[:, 1:, :, :]
     vs = vs[:, 1:, :]
@@ -448,6 +457,7 @@ def parForwardPass_init(ocp:CLQT, x0, Kx, d, blocks, steps, dt, t0):
         x = pack_Psiphi(Psi, phi)
         x = euler(f, dt, x, t)
         Psi, phi = unpack_Psiphi(x)
+
         return (Psi, phi), (Psi, phi)
 
     Ts = jnp.arange(0, steps, dtype=jnp.float64) * dt
@@ -468,7 +478,7 @@ def parForwardPass_init(ocp:CLQT, x0, Kx, d, blocks, steps, dt, t0):
         return (Psis[-1], phis[-1]), (Psis[-1], phis[-1])
 
     t0s = jnp.array(t0) + jnp.arange(0, blocks, dtype=jnp.float64) * steps * dt
-    _, (Psi, phi) = jax.vmap(single_pass)((t0s, Kx, d))
+    _, (Psi, phi) = vmap(single_pass)((t0s, Kx, d))
 
     Psiss = jnp.concatenate([jnp.expand_dims(Psi0, axis=0), Psi], axis=0)
     phiss = jnp.concatenate([jnp.expand_dims(phi0, axis=0), phi], axis=0)
@@ -493,7 +503,7 @@ def parForwardPass_extract(ocp: CLQT, Kxs, ds, elems, steps, dt, t0, u_zoh):
         xs, us = seqForwardPass(ocp, dt, t_start, x0, Kx_block, d_block, u_zoh)
         return (xs, us), (xs, us)
 
-    _, (xs_blocks, us_blocks) = jax.vmap(block_fn)(t0s, phis[:-1], Kxs, ds)
+    _, (xs_blocks, us_blocks) = vmap(block_fn)(t0s, phis[:-1], Kxs, ds)
 
     xs = xs_blocks[:, :-1, :].reshape(-1, state_dim)
     us = us_blocks.reshape(-1, control_dim)
@@ -528,101 +538,27 @@ def parForwardPass(ocp: CLQT, x0, Kx, d, blocks, steps, dt, t0, u_zoh=False):
     # Parallel computation of (backward and) forward value functions
 ###########################################################################
 
-def bwpass_fw_ode_f(ocp:CLQT, x, t):
+def parFwdBwdPass_init(ocp:CLQT,x0,v0,S0,blocks,steps,dt,t0):
+
+    A_blocks, b_blocks, C_blocks, eta_blocks, J_blocks= parBackwardPass_init(ocp, blocks, steps, t0, dt)
+
+    dim = ocp.F(0).shape[0]
     
-    
-    A, b, C, eta, J = unpack_abcej(x)
-
-    F = ocp.F(t)
-    R = ocp.R(t)
-    H = ocp.H(t)
-    Q = ocp.Q(t)
-    
-
-    y = ocp.y(t)
-    c = ocp.c(t)
-    r = ocp.r(t)
-
-    I = jnp.eye(R.shape[0])
-    R_inv = jnp.linalg.solve(R, I)
-
-    dA = F @ A - C @ H.T @ R_inv @ H @ A
-    db = F @ b + C @ H.T @ R_inv @ (y - r) - C @ H.T @ R_inv @ H @ b + c
-    dC = F @ C - C @ H.T @ R_inv @ H @ C + C @ F.T + Q
-
-    deta = A.T @ H.T @ R_inv @ (y - r) - A.T @ H.T @ R_inv @ H @ b
-    dJ = A.T @ H.T @ R_inv @ H @ A
-
-    dx = pack_abcej(dA,db,dC,deta,dJ)
-
-    return dx
-
-
-
-
-def parFwdBwdPass_init(ocp:CLQT,x0,blocks,steps,dt,t0):
-
-    elems = []
-
-    
-    dim = ocp.ST.shape[0]
-
-    A_int = jnp.eye(dim)
-    b_int = jnp.zeros((dim,))
-    C_int = jnp.zeros((dim, dim))
-    eta_int = jnp.zeros((dim,))
-    J_int = jnp.zeros((dim, dim))
-
-    Ts = jnp.arange(0, steps, dtype=jnp.float64) * dt
-
-    def step_forward(carry, t):
-
-        f = lambda x, t: bwpass_fw_ode_f(ocp, x, t)
-
-        A, b, C, eta, J = carry
-
-        x = pack_abcej(A, b, C, eta, J)
-        x = euler(f, dt, x, t)
-
-        A, b, C, eta, J = unpack_abcej(x)
-        C = 0.5 * (C + C.T)
-        J = 0.5 * (J + J.T)
-
-        return (A, b, C, eta, J), (A, b, C, eta, J)
-
-    def single_pass(_t0):
-
-        _, (As, bs, Cs, etas, Js) = lax.scan(
-            f=step_forward, init=(A_int, b_int, C_int, eta_int, J_int), xs=(_t0 + Ts), reverse=False
-        )
-
-        A1, b1, C1, eta1, J1 = As[-1], bs[-1], Cs[-1], etas[-1], Js[-1]
-
-        return (A1, b1, C1, eta1, J1)
-
-    t0s = t0 + jnp.arange(0, blocks, dtype=jnp.float64) * steps * dt
-
-    (A_blocks, b_blocks, C_blocks, eta_blocks, J_blocks) = jax.vmap(single_pass)(t0s)
-
-    
-    A0 = jnp.zeros((dim, dim))
-    b0 = x0
-    C0 = jnp.zeros((dim, dim))
+    A0 = jnp.zeros((dim,dim))
+    b0 = jnp.zeros((dim,))
+    C0 = jnp.zeros((dim,dim))
     eta0 = jnp.zeros((dim,))
     J0 = jnp.zeros((dim,dim))
 
-
-    As = jnp.concatenate([A0[None],A_blocks], axis=0)
-    bs = jnp.concatenate([b0[None],b_blocks], axis=0)
-    Cs = jnp.concatenate([C0[None],C_blocks], axis=0)
-    etas = jnp.concatenate([eta0[None],eta_blocks], axis=0)
-    Js = jnp.concatenate([J0[None],J_blocks], axis=0)
-
+    As = jnp.concatenate([A0[None],A_blocks[:-1]], axis=0)
+    bs = jnp.concatenate([b0[None],b_blocks[:-1]], axis=0)
+    Cs = jnp.concatenate([C0[None],C_blocks[:-1]], axis=0)
+    etas = jnp.concatenate([eta0[None],eta_blocks[:-1]], axis=0)
+    Js = jnp.concatenate([J0[None],J_blocks[:-1]], axis=0)
     
     elems = (As, bs, Cs, etas, Js)
 
     return elems
-
 
 
 def parFwdBwdPass_extract(ocp:CLQT, K, d, S, v, elems, steps, dt, t0):
@@ -641,7 +577,8 @@ def parFwdBwdPass_extract(ocp:CLQT, K, d, S, v, elems, steps, dt, t0):
         (A_n, b_n, C_n) = seqFwdBwdPass(ocp, steps, dt=dt, t0=t0_i, A=A_i, b=b_i, C=C_i)
         return (A_n, b_n, C_n)
     
-    (A_n, b_n, C_n) = jax.vmap(batched_seq_fwdbwd_pass)(t0s,A_blocks,b_blocks,C_blocks)
+    (A_n, b_n, C_n) = vmap(batched_seq_fwdbwd_pass)(t0s,A_blocks,b_blocks,C_blocks)
+
 
     AT = A_n[-1, -1, :, :]
     bT = b_n[-1, -1, :]
@@ -652,7 +589,6 @@ def parFwdBwdPass_extract(ocp:CLQT, K, d, S, v, elems, steps, dt, t0):
     Cs_all = C_n[:, :-1, :, :]
 
     
-
     Ac = jnp.reshape(As_all,(-1, As_all.shape[-2], As_all.shape[-1]))
     bc = jnp.reshape(bs_all,(-1, bs_all.shape[-1]))
     Cc = jnp.reshape(Cs_all,(-1, Cs_all.shape[-2], Cs_all.shape[-1]))
@@ -664,14 +600,12 @@ def parFwdBwdPass_extract(ocp:CLQT, K, d, S, v, elems, steps, dt, t0):
     return combine_seqFwdBwdPass(S=S, K=K, v=v, d=d, A=As_all, b=bs_all, C=Cs_all)
 
 
-
 def par_fwdbwd_pass_scan(elems):
     return lax.associative_scan(vmap(combine_abcej), elems, reverse=False)
   
 
-
-def parFwdBwdPass(ocp:CLQT, x0, K, d, S, v, blocks, steps, dt, t0): 
+def parFwdBwdPass(ocp:CLQT,x0,v0,S0, K, d, S, v, blocks, steps, dt, t0): 
     
-    elems = parFwdBwdPass_init(ocp,x0, blocks, steps, dt, t0)
+    elems = parFwdBwdPass_init(ocp,x0,v0,S0, blocks, steps, dt, t0)
     elems = par_fwdbwd_pass_scan(elems)
     return parFwdBwdPass_extract(ocp, K, d, S, v, elems, steps, dt, t0)     
