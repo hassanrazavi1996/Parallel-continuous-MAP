@@ -16,14 +16,14 @@ def y(t, dt, nsteps, y_dis):
     return y_vals
 
 
-def y_reverse( t, tf, dt, nsteps, y_dis):
+def y_reverse(t, tf, dt, nsteps, y_dis):
 
     y_rev = y(tf - t, dt, nsteps, y_dis)
-            
+
     return y_rev
 
 
-#general function
+# general function
 def f_convert(t, dt, nsteps, x_dis):
 
     t = jnp.asarray(t)
@@ -33,4 +33,3 @@ def f_convert(t, dt, nsteps, x_dis):
     x_vals = jnp.where(jnp.ndim(t) == 0, x_vals, x_vals.T)
 
     return x_vals
-

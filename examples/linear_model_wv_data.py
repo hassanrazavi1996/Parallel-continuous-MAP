@@ -9,18 +9,16 @@ def make_wv_data(m0, P0, F, L, H, nsteps, dt, q, r, t0, seed=None):
 
     rng = np.random.default_rng(seed)
 
-
     T = np.zeros(nsteps)
     X = np.zeros((nsteps, 4))
     Y = np.zeros((nsteps, 2))
     DY = np.zeros((nsteps, 2))
-    
 
     x = rng.multivariate_normal(m0, P0)
-    X[0]=x
+    X[0] = x
 
     y = np.zeros(2)
-    t=t0
+    t = t0
 
     for k in range(0, nsteps):
 
@@ -43,5 +41,5 @@ def make_wv_data(m0, P0, F, L, H, nsteps, dt, q, r, t0, seed=None):
 
     DY_jax0 = jnp.array(DY, dtype=jnp.float64) / dt
     DY_jax1 = jnp.flip(DY_jax0, axis=0)
-    
+
     return X, DY_jax0, DY_jax1

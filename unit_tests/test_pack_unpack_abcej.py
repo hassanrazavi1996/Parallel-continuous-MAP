@@ -1,8 +1,10 @@
 from jax import config
+
 config.update("jax_enable_x64", True)
 
 import jax.numpy as jnp
 from cmap.clqt_jax import pack_abcej, unpack_abcej
+
 
 def make_demo(n):
     A = jnp.arange(n * n, dtype=jnp.float64).reshape(n, n) + 1.0
@@ -11,6 +13,7 @@ def make_demo(n):
     b = jnp.arange(n, dtype=jnp.float64) + 100.0
     eta = jnp.arange(n, dtype=jnp.float64) + 200.0
     return A, b, C, eta, J
+
 
 def test_pack_unpack_abcej_scalar():
     n = 4
@@ -32,6 +35,7 @@ def test_pack_unpack_abcej_scalar():
     assert jnp.allclose(C2, C)
     assert jnp.allclose(eta2, eta)
     assert jnp.allclose(J2, J)
+
 
 def test_pack_unpack_abcej_batched():
     n = 3

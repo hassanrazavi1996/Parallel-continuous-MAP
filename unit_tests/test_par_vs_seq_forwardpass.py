@@ -3,7 +3,13 @@ from jax import config
 config.update("jax_enable_x64", True)
 
 import jax.numpy as jnp
-from cmap.clqt_jax import CLQT, seqBackwardPass, parBackwardPass
+from cmap.clqt_jax import (
+    CLQT,
+    seqBackwardPass,
+    parBackwardPass,
+    seqForwardPass,
+    parForwardPass,
+)
 
 
 def make_test_ocp():
@@ -99,7 +105,7 @@ def make_test_ocp():
     return CLQT(vT, F, ST, Q, R, c, H, y, r, T)
 
 
-def test_seq_vs_par_backward_pass_equal():
+def test_seq_vs_par_forward_pass_equal():
     ocp = make_test_ocp()
     steps = 17
     blocks = 3000
@@ -110,23 +116,25 @@ def test_seq_vs_par_backward_pass_equal():
     S_seq, v_seq, Kx_seq, d_seq = seqBackwardPass(
         ocp, steps_all, dt, t0, ocp.ST, ocp.vT
     )
-
     Kx_par, d_par, S_par, v_par = parBackwardPass(ocp, blocks, steps, t0, dt)
 
-    assert (
-        S_seq.shape == S_par.shape
-    ), f"S shape mismatch {S_seq.shape} != {S_par.shape}"
-    assert (
-        v_seq.shape == v_par.shape
-    ), f"v shape mismatch {v_seq.shape} != {v_par.shape}"
-    assert (
-        Kx_seq.shape == Kx_par.shape
-    ), f"Kx shape mismatch {Kx_seq.shape} != {Kx_par.shape}"
-    assert (
-        d_seq.shape == d_par.shape
-    ), f"d shape mismatch {d_seq.shape} != {d_par.shape}"
+    assert Kx_seq.shape == Kx_par.shape
+    assert d_seq.shape == d_par.shape
 
-    assert jnp.allclose(S_seq, S_par, atol=1e-7)
-    assert jnp.allclose(v_seq, v_par, atol=1e-7)
-    assert jnp.allclose(Kx_seq, Kx_par, atol=1e-7)
-    assert jnp.allclose(d_seq, d_par, atol=1e-7)
+    phi0 = jnp.linalg.solve(S_seq[0], v_seq[0])
+
+    x_seq, u_seq = seqForwardPass(ocp, dt, t0, phi0, Kx_seq, d_seq, u_zoh=False)
+
+    u_par, x_par = parForwardPass(
+        ocp, phi0, Kx_par, d_par, blocks, steps, dt, t0, u_zoh=False
+    )
+
+    assert (
+        x_seq.shape == x_par.shape
+    ), f"x shape mismatch {x_seq.shape} vs {x_par.shape}"
+    assert (
+        u_seq.shape == u_par.shape
+    ), f"u shape mismatch {u_seq.shape} vs {u_par.shape}"
+
+    assert jnp.allclose(x_seq, x_par, atol=1e-6, rtol=1e-6)
+    assert jnp.allclose(u_seq, u_par, atol=1e-6, rtol=1e-6)

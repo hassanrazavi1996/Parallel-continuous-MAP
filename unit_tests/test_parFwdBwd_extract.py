@@ -1,10 +1,12 @@
 import jax
 from jax import config
+
 config.update("jax_enable_x64", True)
 
 import jax.numpy as jnp
 
 from cmap.clqt_jax import CLQT, parFwdBwdPass_extract
+
 
 def make_trivial_ocp(n):
     F = lambda t: jnp.zeros((n, n))
@@ -19,9 +21,10 @@ def make_trivial_ocp(n):
     T = 1.0
     return CLQT(vT=vT, F=F, ST=ST, Q=Q, R=R, c=c, H=H, y=y, r=r, T=T)
 
+
 def test_parFwdBwdPass_extract_trivial():
-    n = 4            
-    m = 2            
+    n = 4
+    m = 2
     blocks = 2
     steps = 3
     dt = 0.1
@@ -31,7 +34,6 @@ def test_parFwdBwdPass_extract_trivial():
 
     steps_total = blocks * steps
 
-    
     As = jnp.stack([jnp.eye(n) for _ in range(blocks + 1)])
     bs = jnp.stack([jnp.zeros((n,)) for _ in range(blocks + 1)])
     Cs = jnp.stack([jnp.zeros((n, n)) for _ in range(blocks + 1)])
@@ -39,13 +41,11 @@ def test_parFwdBwdPass_extract_trivial():
     Js = jnp.stack([jnp.zeros((n, n)) for _ in range(blocks + 1)])
     elems = (As, bs, Cs, etas, Js)
 
-
-
     S = jnp.stack([jnp.zeros((n, n)) for _ in range(steps_total + 1)])
     v = jnp.stack([jnp.zeros((n,)) for _ in range(steps_total + 1)])
 
     K = jnp.zeros((steps_total, m, n))
-    d = jnp.ones((steps_total, m)) * 2.0   
+    d = jnp.ones((steps_total, m)) * 2.0
 
     u_out, x_out, As_all, bs_all, Cs_all = parFwdBwdPass_extract(
         ocp=ocp, K=K, d=d, S=S, v=v, elems=elems, steps=steps, dt=dt, t0=t0

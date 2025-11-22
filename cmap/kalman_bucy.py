@@ -99,12 +99,11 @@ def continuous_rts_smoother(Ps_f, ms_f, Fs, Ls, Qs, t_eval, dt):
         return (P_prev, m_prev), (P_prev, m_prev)
 
     init = (Ps_f[-1], ms_f[-1])
-    t_s = jnp.arange(1,n_steps+1)
+    t_s = jnp.arange(1, n_steps + 1)
 
     _, (Ps_s, ms_s) = jax.lax.scan(f=body, init=init, xs=t_s, reverse=True)
 
     Ps_s = jnp.concatenate([Ps_s, Ps_f[-1][None, ...]], axis=0)
     ms_s = jnp.concatenate([ms_s, ms_f[-1][None, ...]], axis=0)
-
 
     return ms_s, Ps_s
