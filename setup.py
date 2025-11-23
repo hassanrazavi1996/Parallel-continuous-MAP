@@ -11,6 +11,7 @@ setup(
         "jaxlib>=0.4.27",
         "matplotlib",
         "pandas",
+        "pytest",
     ],
     zip_safe=False,
 )
