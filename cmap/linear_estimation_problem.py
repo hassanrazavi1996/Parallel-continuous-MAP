@@ -19,5 +19,5 @@ class Estimation(NamedTuple):
     R: Callable
     y: jnp.ndarray
     P0: jnp.ndarray
-    x0: jnp.ndarray
+    m0: jnp.ndarray
     T: float

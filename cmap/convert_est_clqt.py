@@ -22,7 +22,7 @@ def est_to_clqt(est: Estimation, steps_all):
 
     y_rev = lambda t: f_convert(t, T / steps_all, steps_all, y[::-1])
 
-    ST = jnp.linalg.solve(est.P0, jnp.eye(len(est.x0)))
-    vT = jnp.linalg.solve(est.P0, est.x0)
+    ST = jnp.linalg.solve(est.P0, jnp.eye(len(est.m0)))
+    vT = jnp.linalg.solve(est.P0, est.m0)
 
     return F, H, c, r, Q, R, T, ST, vT, y_rev

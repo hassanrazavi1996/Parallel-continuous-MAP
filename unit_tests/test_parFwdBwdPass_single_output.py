@@ -42,10 +42,9 @@ def test_parFwdBwdPass_single_step_output():
     S = jnp.zeros((steps_total + 1, n, n))
     v = jnp.zeros((steps_total + 1, n))
 
-    u_out, x_out, As_all, bs_all, Cs_all = parFwdBwdPass(
+    u_out, x_out = parFwdBwdPass(
         ocp=ocp,
         x0=x0,
-        S0=S0,
         K=K,
         d=d,
         S=S,
@@ -65,11 +64,3 @@ def test_parFwdBwdPass_single_step_output():
 
     assert jnp.allclose(u_out, expected_u, atol=1e-12)
     assert jnp.allclose(x_out, expected_x, atol=1e-12)
-
-    assert As_all.shape == (steps_total + 1, n, n)
-    assert bs_all.shape == (steps_total + 1, n)
-    assert Cs_all.shape == (steps_total + 1, n, n)
-
-    assert jnp.allclose(As_all, jnp.zeros_like(As_all), atol=1e-12)
-    assert jnp.allclose(bs_all, expected_bs, atol=1e-12)
-    assert jnp.allclose(Cs_all, jnp.zeros_like(Cs_all), atol=1e-12)

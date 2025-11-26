@@ -677,7 +677,7 @@ def parFwdBwdPass_extract(ocp: CLQT, K, d, S, v, elems, steps, dt, t0):
     
     u, x = combine_seqFwdBwdPass(S, K, v, d, As_all, bs_all, Cs_all)
 
-    return u, x, As_all, bs_all, Cs_all
+    return u, x
 
 
 def par_fwdbwd_pass_scan(elems):
@@ -688,5 +688,4 @@ def parFwdBwdPass(ocp: CLQT, x0, K, d, S, v, blocks, steps, dt, t0):
     
     elems = parFwdBwdPass_init(ocp, x0, blocks, steps, dt, t0)
     elems = par_fwdbwd_pass_scan(elems)
-
     return parFwdBwdPass_extract(ocp, K, d, S, v, elems, steps, dt, t0)

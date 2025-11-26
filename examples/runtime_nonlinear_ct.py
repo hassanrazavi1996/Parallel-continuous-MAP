@@ -53,8 +53,8 @@ L = lambda t: jnp.array(
 Q = lambda t: L(t) @ W(t) @ L(t).T
 c = lambda t: jnp.zeros((5,))
 r = lambda t: jnp.zeros((2,))
-x0 = jnp.array([5.0, 5.0, 0.0, 0.3, jnp.deg2rad(0.0)])
-vT = jnp.linalg.solve(P0, x0)
+m0 = jnp.array([5.0, 5.0, 0.0, 0.3, jnp.deg2rad(0.0)])
+vT = jnp.linalg.solve(P0, m0)
 
 
 ST = jnp.linalg.solve(P0, jnp.eye(5))
@@ -74,7 +74,7 @@ for i in range(0, len(blocks)):
     dt = T / steps_all
 
     _, y_discrete = make_ct_data(
-        x0,
+        m0,
         P0,
         f,
         h,
@@ -87,14 +87,14 @@ for i in range(0, len(blocks)):
         r_bearing,
         seed=123,
     )
-    est = Estimation(F, H, c, r, L, W, R, y_discrete, P0, x0, T)
+    est = Estimation(F, H, c, r, L, W, R, y_discrete, P0, m0, T)
 
     F_cl, H_cl, c_cl, r_cl, Q_cl, R_cl, T_cl, ST_cl, vT_cl, y_cl = est_to_clqt(
         est, steps_all
     )
     clqt = CLQT(vT_cl, F_cl, ST_cl, Q_cl, R_cl, c_cl, H_cl, y_cl, r_cl, T_cl)
 
-    x, u = intial_guess(x0, steps_all)
+    x, u = intial_guess(m0, steps_all)
     dt = T / steps_all
 
     seq_jit = lambda x, t0: clqt_seq_speedtest_nonlinear(

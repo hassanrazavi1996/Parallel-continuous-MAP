@@ -33,16 +33,16 @@ def make_con_linear_wv_clqt(steps_all, dt):
     R = lambda t: v_meas * jnp.eye(2)
     c = lambda t: jnp.zeros((4,))
     r = lambda t: jnp.zeros((2,))
-    x0 = jnp.array([5.0, 5.0, 0.0, 0.0])
+    m0 = jnp.array([5.0, 5.0, 0.0, 0.0])
     P0 = p0 * jnp.eye(4)
 
-    _, y_discrete, _ = make_wv_data(x0, P0, F(0), L(0), H(0), steps_all, dt, q, v_meas, t0, seed=123)
+    _, y_discrete, _ = make_wv_data(m0, P0, F(0), L(0), H(0), steps_all, dt, q, v_meas, t0, seed=123)
 
-    est = Estimation(F, H, c, r, L, W, R, y_discrete, P0, x0, T)
+    est = Estimation(F, H, c, r, L, W, R, y_discrete, P0, m0, T)
     F_cl, H_cl, c_cl, r_cl, Q_cl, R_cl, T_cl, ST_cl, vT_cl, y_cl = est_to_clqt(est, steps_all)
     clqt = CLQT(vT=vT_cl, F=F_cl, ST=ST_cl, Q=Q_cl, R=R_cl, c=c_cl, H=H_cl, y=y_cl, r=r_cl, T=T_cl)
 
-    return clqt, x0
+    return clqt, m0
 
 
 def main():
