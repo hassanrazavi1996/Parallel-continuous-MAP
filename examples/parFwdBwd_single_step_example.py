@@ -61,7 +61,6 @@ def main():
     u_out_par, x_out_par, As_all_par, bs_all_par, Cs_all_par = parFwdBwdPass(
         ocp=ocp,
         x0=phi0,
-        S0=S0,
         K=K_seq,
         d=d_seq,
         S=S_seq,
