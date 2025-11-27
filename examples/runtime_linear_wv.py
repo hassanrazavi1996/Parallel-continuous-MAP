@@ -91,7 +91,7 @@ for i in range(0, len(blocks)):
     jit_fun2 = jax.jit(par_jit)
     _, _ = jit_fun2(t0, dt)
 
-    for _ in range(10):
+    for _ in range(5):
         start_time = time.time()
         _, _ = jit_fun1(t0, dt, ST, vT)
         end_time = time.time()
@@ -117,8 +117,8 @@ df_mean_par = pd.DataFrame(par_time_means_arr)
 df_mean_seq = pd.DataFrame(seq_time_means_arr)
 
 
-df_mean_par.to_csv("par_time_linearcase.csv")
-df_mean_seq.to_csv("seq_time_linearcase.csv")
+df_mean_par.to_csv("par_time_linear_wv.csv")
+df_mean_seq.to_csv("seq_time_linear_wv.csv")
 
 
 plt.plot(blocks, par_time_means_arr, label="Parallel method", marker="o")
