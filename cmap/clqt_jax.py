@@ -614,11 +614,10 @@ def parFwdBwd_init(ocp: CLQT,blocks, steps, t0, dt):
 
     elems = (As, bs, Cs, etas, Js)
 
-
     return elems
 
 
-def parFwdBwdPass_init(ocp: CLQT, x0, blocks, steps, dt, t0):
+def parFwdBwdPass_init(ocp: CLQT, C_init, blocks, steps, dt, t0):
 
     (A_blocks, b_blocks, C_blocks, eta_blocks, J_blocks) = parFwdBwd_init(
         ocp, blocks, steps, t0, dt
@@ -627,8 +626,8 @@ def parFwdBwdPass_init(ocp: CLQT, x0, blocks, steps, dt, t0):
     dim = ocp.ST.shape[0]
 
     A_init = jnp.zeros_like(ocp.ST)
-    b_init = x0
-    C_init = jnp.zeros_like(ocp.ST)
+    b_init = jnp.zeros((dim,))
+    C_init = C_init*jnp.eye(dim)
     eta_init = jnp.zeros((dim,))
     J_init = jnp.zeros_like(ocp.ST)
 
@@ -684,8 +683,8 @@ def par_fwdbwd_pass_scan(elems):
     return lax.associative_scan(vmap(combine_abcej_forward), elems, reverse=False)
 
 
-def parFwdBwdPass(ocp: CLQT, x0, K, d, S, v, blocks, steps, dt, t0):
+def parFwdBwdPass(ocp: CLQT, C_init, K, d, S, v, blocks, steps, dt, t0):
     
-    elems = parFwdBwdPass_init(ocp, x0, blocks, steps, dt, t0)
+    elems = parFwdBwdPass_init(ocp, C_init, blocks, steps, dt, t0)
     elems = par_fwdbwd_pass_scan(elems)
     return parFwdBwdPass_extract(ocp, K, d, S, v, elems, steps, dt, t0)
