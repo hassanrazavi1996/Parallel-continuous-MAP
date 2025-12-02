@@ -102,8 +102,8 @@ def kalman_filtering_bacward_riccati_ode_f(fs: KFRTS_R, x, t):
     I = jnp.eye(R.shape[0])
     R_inv = jlinalg.solve(R, I)
 
-    dP = P @ F.T + F @ P + Q  - P @ H.T @ R_inv @ H @ P
-    dm = F @ m  + c + P @ H.T @ R_inv @ ( y - H @ m - r)
+    dP = -P @ F.T - F @ P + Q  - P @ H.T @ R_inv @ H @ P
+    dm = -F @ m  - c + P @ H.T @ R_inv @ ( y - H @ m - r)
 
     dx = pack_Pm(dP, dm)
 
@@ -184,10 +184,10 @@ def parallel_Kalman_bw_ode_f(fs: KFRTS_R, x, t):
     R_inv = jlinalg.solve(R, I)
 
     dA = jlinalg.solve(P, (A @ Q).T).T + A @ F
-    db = -A @ Q @ jlinalg.solve(P, m) + A @ c
+    db = -A @ Q @ jlinalg.solve(P, m)  + A @ c
     dC = -A @ Q @ A.T
-    dm = -P @ H.T @ R_inv @ (y - r - H @ m) - F @ m - c
-    dP =  P @ H.T @ R_inv @ H @ P -  Q  - P @ F.T - F @ P
+    dm =  P @ H.T @ R_inv @ (y - r - H @ m) - F @ m - c
+    dP = -P @ H.T @ R_inv @ H @ P + Q  - P @ F.T - F @ P
 
     dx = pack_abcej(dA, db, dC, dm, dP)
 
@@ -247,65 +247,131 @@ def parKalmanBackward_init(fs: KFRTS_R, blocks, steps, t0, dt):
     ms = jnp.concatenate([m_blocks, mT[None]], axis=0)
     Ps = jnp.concatenate([P_blocks, PT[None]], axis=0)
 
-    elems = (As, bs, Cs, ms, Ps)
+    Ps = jnp.concatenate([P_blocks, PT[None]], axis=0)
+
+    vs = jlinalg.solve(Ps, ms[..., None]).squeeze(-1)
+
+    I = jnp.eye(Ps.shape[-1])[None, :, :].repeat(Ps.shape[0], axis=0)
+    Ss = jlinalg.solve(Ps, I)
+    elems = (As, bs, Cs, vs, Ss)
 
     return elems
 
 
-def parKalmanBackward_extract(fs: KFRTS_R, elems, steps, dt, t0):
+# def parKalmanBackward_extract(fs: KFRTS_R, elems, steps, dt, t0):
 
-    As, bs, Cs, ms, Ps = elems
-    blocks = Ps.shape[0] - 1
+#     As, bs, Cs, ms, Ps = elems
+#     blocks = Ps.shape[0] - 1
+
+#     t0s = t0 + jnp.arange(blocks) * steps * dt
+
+#     P_blocks = Ps[1:]
+#     m_blocks = ms[1:]
+
+#     (Ps, ms, Kxs, ds) = vmap(seqKalmanBackward, in_axes=(None, None, None, 0, 0, 0))(
+#         fs, steps, dt, t0s, P_blocks, m_blocks
+#     )
+
+#     Ps = Ps[:, 1:, :, :]
+#     ms = ms[:, 1:, :]
+
+#     Ps = Ps.reshape((-1,) + Ps.shape[-2:])
+#     ms = ms.reshape((-1,) + ms.shape[-1:])
+#     Kxs = Kxs.reshape((-1,) + Kxs.shape[-2:])
+#     ds = ds.reshape((-1,) + ds.shape[-1:])
+
+#     P0 = Ps[0]
+#     m0 = ms[0]
+
+#     Ps = jnp.concatenate([P0[None], Ps], axis=0)
+#     ms = jnp.concatenate([m0[None], ms], axis=0)
+
+#     return Kxs, ds, Ps, ms
+
+
+# def combine_abcej_backward(elem1, elem2):
+#     Ajk, bjk, Cjk, mjk, Pjk = elem1
+#     Aij, bij, Cij, mij, Pij = elem2
+
+#     I = jnp.eye(Aij.shape[0])
+#     Aik = jnp.dot(jnp.dot(Ajk,Pjk), jlinalg.solve(Pjk + Cij, jnp.dot(Pjk,Aij)))
+#     bik = bjk + jnp.dot(Ajk, jnp.dot(jlinalg.solve(Pjk + Cij, jnp.dot(Pjk, bij + jnp.dot(Cij, jlinalg.solve(Pij, mjk)))), jnp.eye(bij.shape[0])))
+#     Cik = jnp.dot(Ajk, jnp.dot(jlinalg.solve((Cij +  Pjk),Pjk),jnp.dot(Cij,Ajk.T) ) )+ Cjk
+#     mik = mij + jnp.dot(
+#     Pij,
+#     jnp.dot(
+#         Aij.T,
+#         jlinalg.solve(
+#             jnp.dot(Aij, jnp.dot(Pij, Aij.T)) + Pjk + Cij,
+#             mjk - bij - jnp.dot(Aij, mij),
+#         ),
+#     ),)
+
+
+#     Pik = Pij - jnp.dot(Pij,
+#          jnp.dot(Aij.T,
+#             jlinalg.solve(
+#                 Pjk + Cij + jnp.dot(Aij, jnp.dot(Pij, Aij.T)),
+#                 jnp.dot(Aij, Pij)
+#             )
+#          )
+#       )
+#     elems = (Aik, bik ,Cik ,mik ,Pik)
+
+#     return elems
+
+
+def parKalmanBackward_extract(ocp: KFRTS_R, elems, steps, dt, t0):
+
+    As, bs, Cs, etas, Js = elems
+    blocks = Js.shape[0] - 1
 
     t0s = t0 + jnp.arange(blocks) * steps * dt
 
-    P_blocks = Ps[1:]
-    m_blocks = ms[1:]
+    J_blocks = Js[1:]
+    eta_blocks = etas[1:]
 
-    (Ps, ms, Kxs, ds) = vmap(seqKalmanBackward, in_axes=(None, None, None, 0, 0, 0))(
-        fs, steps, dt, t0s, P_blocks, m_blocks
+    (Ss, vs, Kxs, ds) = vmap(seqKalmanBackward, in_axes=(None, None, None, 0, 0, 0))(
+        ocp, steps, dt, t0s, J_blocks, eta_blocks
     )
 
-    Ps = Ps[:, 1:, :, :]
-    ms = ms[:, 1:, :]
+    Ss = Ss[:, 1:, :, :]
+    vs = vs[:, 1:, :]
 
-    Ps = Ps.reshape((-1,) + Ps.shape[-2:])
-    ms = ms.reshape((-1,) + ms.shape[-1:])
+    Ss = Ss.reshape((-1,) + Ss.shape[-2:])
+    vs = vs.reshape((-1,) + vs.shape[-1:])
     Kxs = Kxs.reshape((-1,) + Kxs.shape[-2:])
     ds = ds.reshape((-1,) + ds.shape[-1:])
 
-    P0 = Ps[0]
-    m0 = ms[0]
+    S0 = Js[0]
+    v0 = etas[0]
 
-    Ps = jnp.concatenate([P0[None], Ps], axis=0)
-    ms = jnp.concatenate([m0[None], ms], axis=0)
+    Ss = jnp.concatenate([S0[None], Ss], axis=0)
+    vs = jnp.concatenate([v0[None], vs], axis=0)
 
-    return Kxs, ds, Ps, ms
+    return Kxs, ds, Ss, vs
+
 
 
 def combine_abcej_backward(elem1, elem2):
-    Ajk, bjk, Cjk, mjk, Pjk = elem1
-    Aij, bij, Cij, mij, Pij = elem2
+
+    Ajk, bjk, Cjk, etajk, Jjk = elem1
+    Aij, bij, Cij, etaij, Jij = elem2
 
     I = jnp.eye(Aij.shape[0])
-    Aik = jnp.dot(Ajk, jlinalg.solve(Pjk + Cij, jnp.dot(Pjk,Aij)))
-    bik = bjk + jnp.dot(Ajk, jnp.dot(jlinalg.solve(Pjk + Cij, jnp.dot(Pjk, bij + jnp.dot(Cij, jlinalg.solve(Pij, mjk)))), jnp.eye(bij.shape[0])))
-    Cik = jnp.dot(Ajk, jnp.dot(jlinalg.solve((Cij +  Pjk),Pjk),jnp.dot(Cij,Ajk.T) ) )+ Cjk
-    mik = mij + jnp.dot(
-    Pij,
-    jnp.dot(
-        Aij.T,
-        jlinalg.solve(
-            jnp.dot(Aij, jnp.dot(Pij, Aij.T)) + Pjk + Cij,
-            mjk - bij - jnp.dot(Aij, mij),
-        ),
-    ),)
+    Aik = jnp.dot(Ajk, jlinalg.solve(I + jnp.dot(Cij, Jjk), Aij))
+    bik = (
+        jnp.dot(Ajk, jlinalg.solve(I + jnp.dot(Cij, Jjk), bij + jnp.dot(Cij, etajk)))
+        + bjk
+    )
+    Cik = jnp.dot(Ajk, jlinalg.solve(I + jnp.dot(Cij, Jjk), jnp.dot(Cij, Ajk.T))) + Cjk
+    etaik = (
+        jnp.dot(Aij.T, jlinalg.solve(I + jnp.dot(Jjk, Cij), etajk - jnp.dot(Jjk, bij)))
+        + etaij
+    )
+    Jik = jnp.dot(Aij.T, jlinalg.solve(I + jnp.dot(Jjk, Cij), jnp.dot(Jjk, Aij))) + Jij
+    return Aik, bik, Cik, etaik, Jik
 
-    Pik = Pij - jnp.dot(jnp.dot(Pij, jnp.dot(Aij.T, jlinalg.solve(Pjk + Cij + jnp.dot(Aij, jnp.dot(Pij, Aij.T)), jnp.dot(Aij, Pij)))), Pij)
-
-    elems = (Aik, bik ,Cik ,mik ,Pik)
-
-    return elems
 
 def par_bwd_pass_scan(elems):
     return lax.associative_scan(vmap(combine_abcej_backward), elems, reverse=True)

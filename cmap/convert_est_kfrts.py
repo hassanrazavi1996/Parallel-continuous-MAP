@@ -9,9 +9,9 @@ from cmap.con_to_dis import f_convert
 def est_to_kfrts(est: Estimation, steps_all):
 
     T = est.T
-    F = lambda t: -est.F(T - t)
+    F = lambda t: est.F(T - t)
     H = lambda t: est.H(T - t)
-    c = lambda t: -est.c(T - t)
+    c = lambda t: est.c(T - t)
     r = lambda t: est.r(T - t)
     Q_est = lambda t: est.L(t) @ est.W(t) @ est.L(t).T
     Q = lambda t: Q_est(T - t)
