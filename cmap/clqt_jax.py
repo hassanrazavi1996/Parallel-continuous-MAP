@@ -115,7 +115,7 @@ def riccati_ode_f(ocp: CLQT, x, t):
 def seqBackwardPass(ocp: CLQT, steps, dt, t0, S, v):
 
     Q = ocp.Q(0)
-    Kx = jnp.zeros((Q.shape[-1], Q.shape[-2]))
+    Kx = jnp.zeros_like(ocp.Q(0))
     d = jnp.zeros((Q.shape[-1],))
     Ts = dt * jnp.arange(steps)
 
@@ -245,7 +245,6 @@ def combine_seqFwdBwdPass(S, K, v, d, A, b, C):
 ###########################################################################
 # Parallel computation of gains and value functions backwards
 ############################################################################
-
 
 def bwpass_bw_ode_f(ocp: CLQT, x, t):
 
@@ -382,24 +381,6 @@ def combine_abcej_backward(elem1, elem2):
     Jik = jnp.dot(Aij.T, jlinalg.solve(I + jnp.dot(Jjk, Cij), jnp.dot(Jjk, Aij))) + Jij
     return Aik, bik, Cik, etaik, Jik
 
-def combine_abcej_forward(elem1, elem2):
-
-    Aij, bij, Cij, etaij, Jij = elem1
-    Ajk, bjk, Cjk, etajk, Jjk = elem2
-
-    I = jnp.eye(Aij.shape[0])
-    Aik = jnp.dot(Ajk, jlinalg.solve(I + jnp.dot(Cij, Jjk), Aij))
-    bik = (
-        jnp.dot(Ajk, jlinalg.solve(I + jnp.dot(Cij, Jjk), bij + jnp.dot(Cij, etajk)))
-        + bjk
-    )
-    Cik = jnp.dot(Ajk, jlinalg.solve(I + jnp.dot(Cij, Jjk), jnp.dot(Cij, Ajk.T))) + Cjk
-    etaik = (
-        jnp.dot(Aij.T, jlinalg.solve(I + jnp.dot(Jjk, Cij), etajk - jnp.dot(Jjk, bij)))
-        + etaij
-    )
-    Jik = jnp.dot(Aij.T, jlinalg.solve(I + jnp.dot(Jjk, Cij), jnp.dot(Jjk, Aij))) + Jij
-    return Aik, bik, Cik, etaik, Jik
 
 def par_bwd_pass_scan(elems):
     return lax.associative_scan(vmap(combine_abcej_backward), elems, reverse=True)
@@ -677,6 +658,26 @@ def parFwdBwdPass_extract(ocp: CLQT, K, d, S, v, elems, steps, dt, t0):
     u, x = combine_seqFwdBwdPass(S, K, v, d, As_all, bs_all, Cs_all)
 
     return u, x
+
+
+def combine_abcej_forward(elem1, elem2):
+
+    Aij, bij, Cij, etaij, Jij = elem1
+    Ajk, bjk, Cjk, etajk, Jjk = elem2
+
+    I = jnp.eye(Aij.shape[0])
+    Aik = jnp.dot(Ajk, jlinalg.solve(I + jnp.dot(Cij, Jjk), Aij))
+    bik = (
+        jnp.dot(Ajk, jlinalg.solve(I + jnp.dot(Cij, Jjk), bij + jnp.dot(Cij, etajk)))
+        + bjk
+    )
+    Cik = jnp.dot(Ajk, jlinalg.solve(I + jnp.dot(Cij, Jjk), jnp.dot(Cij, Ajk.T))) + Cjk
+    etaik = (
+        jnp.dot(Aij.T, jlinalg.solve(I + jnp.dot(Jjk, Cij), etajk - jnp.dot(Jjk, bij)))
+        + etaij
+    )
+    Jik = jnp.dot(Aij.T, jlinalg.solve(I + jnp.dot(Jjk, Cij), jnp.dot(Jjk, Aij))) + Jij
+    return Aik, bik, Cik, etaik, Jik
 
 
 def par_fwdbwd_pass_scan(elems):
