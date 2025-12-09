@@ -1,3 +1,6 @@
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+
 import jax
 from jax import config
 
@@ -31,13 +34,13 @@ seq_time_means = []
 
 ######
 
-T = 1.0
+T = 10.0
 
 pos_std = 1e-1
 vel_std = 1e-1
 omega_std = 2e-1
 
-sigma_v = 5e-4
+sigma_v = 5e-3
 sigma_omega = 0.02
 
 r_range = 0.005
@@ -45,10 +48,14 @@ r_bearing = 0.001
 
 R = lambda t: jnp.array([[r_range**2, 0], [0, r_bearing**2]])
 P0 = jnp.diag(jnp.array([pos_std**2, pos_std**2, vel_std**2, vel_std**2, omega_std**2]))
-W = lambda t: jnp.eye(2)
-L = lambda t: jnp.array(
-    [[0.0, 0.0], [0.0, 0.0], [0.0, sigma_v], [0.0, sigma_v], [sigma_omega, 0.0]]
-)
+W = lambda t: jnp.eye(3)
+L = lambda t:  jnp.array([
+        [ 0.0, 0.0,0.0],
+        [ 0.0, 0.0,0.0],
+        [sigma_v,0.0,0.0],
+        [0.0,sigma_v,0.0],
+        [0.0,0.0,sigma_omega]
+    ])
 
 Q = lambda t: L(t) @ W(t) @ L(t).T
 c = lambda t: jnp.zeros((5,))
