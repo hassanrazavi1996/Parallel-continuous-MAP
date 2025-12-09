@@ -612,15 +612,18 @@ def parFwdBwdPass_init(ocp: CLQT, C_init, blocks, steps, dt, t0):
     eta_init = jnp.zeros((dim,))
     J_init = jnp.zeros_like(ocp.ST)
 
+
+
     As = jnp.concatenate([A_init[None],A_blocks[:-1]], axis=0)
     bs = jnp.concatenate([b_init[None],b_blocks[:-1]], axis=0)
     Cs = jnp.concatenate([C_init[None],C_blocks[:-1]], axis=0)
     etas = jnp.concatenate([eta_init[None],eta_blocks[:-1]], axis=0)
     Js = jnp.concatenate([J_init[None],J_blocks[:-1]], axis=0)
 
-    elems = (As, bs, Cs, etas, Js)
+    elems1 = (As, bs, Cs, etas, Js)
+    elems2=(A_blocks,b_blocks,C_blocks,eta_blocks,J_blocks)
 
-    return elems
+    return elems1,elems2
 
 
 def parFwdBwdPass_extract(ocp: CLQT, K, d, S, v, elems, steps, dt, t0):
@@ -680,12 +683,63 @@ def combine_abcej_forward(elem1, elem2):
     return Aik, bik, Cik, etaik, Jik
 
 
+
+
 def par_fwdbwd_pass_scan(elems):
     return lax.associative_scan(vmap(combine_abcej_forward), elems, reverse=False)
 
 
 def parFwdBwdPass(ocp: CLQT, C_init, K, d, S, v, blocks, steps, dt, t0):
     
-    elems = parFwdBwdPass_init(ocp, C_init, blocks, steps, dt, t0)
+    elems, _ = parFwdBwdPass_init(ocp, C_init, blocks, steps, dt, t0)
+    
     elems = par_fwdbwd_pass_scan(elems)
+    u,x=parFwdBwdPass_extract(ocp, K, d, S, v, elems, steps, dt, t0)
+    return u,x
+
+
+
+def parFwdBwdPass_accurate(ocp: CLQT, C_init, K, d, S, v, blocks, steps, dt, t0):
+    
+    _,elems = parFwdBwdPass_init(ocp, C_init, blocks, steps, dt, t0)
+
+    (A,b,C,eta,J)=elems
+    A0m=A[0]
+    b0m=b[0]
+    C0m=C[0]
+    eta0m=eta[0]
+    J0m=J[0]
+    
+    Ae=jnp.zeros_like(A0m)
+    be=jnp.zeros_like(b0m)
+    Ce=C_init*jnp.eye(C0m.shape[0])
+    etae=jnp.zeros_like(eta0m)
+    Je=jnp.zeros_like(J0m)
+
+    A0=jnp.zeros_like(A0m)
+    b0=A0m@jlinalg.solve(J0m,eta0m)+b0m
+    C0=A0m@jlinalg.solve(J0m,A0m.T)+C0m
+    eta0=eta0m
+    J0=J0m
+    
+
+
+    A = A.at[0].set(A0)
+    b = b.at[0].set(b0)
+    C = C.at[0].set(C0)
+    eta=eta.at[0].set(eta0)
+    J=J.at[0].set(J0)
+    
+    A = jnp.concatenate([Ae[None],A[:-1]], axis=0)
+    b = jnp.concatenate([be[None],b[:-1]], axis=0)
+    C = jnp.concatenate([Ce[None],C[:-1]], axis=0)
+    eta = jnp.concatenate([etae[None],eta[:-1]], axis=0)
+    J = jnp.concatenate([Je[None],J[:-1]], axis=0)
+    
+    elems=(A,b,C,eta,J)
+
+
+
+    elems = par_fwdbwd_pass_scan(elems)
+
     return parFwdBwdPass_extract(ocp, K, d, S, v, elems, steps, dt, t0)
