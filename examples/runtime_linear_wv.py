@@ -1,4 +1,8 @@
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+
 import jax
+
 import jax.numpy as jnp
 from jax import config
 import matplotlib.pyplot as plt
@@ -23,9 +27,9 @@ blocks = jnp.logspace(2, 5, 8, base=10, dtype=jnp.int32)
 n = 10
 
 
-T = 1.0
-q = 0.2
-v = 0.001
+T = 5.0
+q = 4
+v = 0.01
 p0 = 0.01
 
 t0 = 0.0
