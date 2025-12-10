@@ -22,9 +22,9 @@ blocks = jnp.logspace(2, 5, 8, base=10, dtype=jnp.int32)
 n = 10
 
 
-T = 1.0
-q = 0.2
-v = 0.001
+T = 5.0
+q = 4
+v = 0.01
 p0 = 0.01
 
 t0 = 0.0
@@ -52,7 +52,6 @@ m0 = jnp.array([5.0, 5.0, 0.0, 0.0])
 
 
 par_time_means = []
-seq_time_means = []
 
 
 for i in range(0, len(blocks)):
