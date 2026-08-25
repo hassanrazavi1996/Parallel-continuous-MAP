@@ -30,29 +30,29 @@ def linearize(clqt, steps, f, h, x):
     return clqt, x_con
 
 
-def seq_iterate(clqt, steps, blocks, f, h, x, t0):
+def seq_iterate(clqt, steps, blocks, f, h, x, t0, diffeq_solver):
     steps_all = steps * blocks
     clqt, _ = linearize(clqt, steps_all, f, h, x)
     dt = clqt.T / (steps * blocks)
     vT = clqt.vT
     ST = clqt.ST
 
-    S_seq, v_seq, Kx_seq, d_seq = seqBackwardPass(clqt, steps_all, dt, t0, ST, vT)
+    S_seq, v_seq, Kx_seq, d_seq = seqBackwardPass(clqt, steps_all, dt, t0, ST, vT,diffeq_solver)
     phi0 = jnp.linalg.solve(S_seq[0], v_seq[0])
-    x_seq, u_seq = seqForwardPass(clqt, dt, t0, phi0, Kx_seq, d_seq, u_zoh=False)
+    x_seq, u_seq = seqForwardPass(clqt, dt, t0, phi0, Kx_seq, d_seq, diffeq_solver, u_zoh=False)
 
     return x_seq
 
 
-def par_iterate(clqt, steps, blocks, f, h, x, t0):
+def par_iterate(clqt, steps, blocks, f, h, x, t0, diffeq_solver):
 
     clqt, _ = linearize(clqt, steps * blocks, f, h, x)
     dt = clqt.T / (steps * blocks)
 
-    Kx_par, d_par, S_par, v_par = parBackwardPass(clqt, blocks, steps, t0, dt)
+    Kx_par, d_par, S_par, v_par = parBackwardPass(clqt, blocks, steps, t0, dt, diffeq_solver)
     phi0 = jnp.linalg.solve(S_par[0], v_par[0])
     u_par, x_par = parForwardPass(
-        clqt, phi0, Kx_par, d_par, blocks, steps, dt, t0, u_zoh=False
+        clqt, phi0, Kx_par, d_par, blocks, steps, dt, t0, diffeq_solver, u_zoh=False
     )
 
     return x_par

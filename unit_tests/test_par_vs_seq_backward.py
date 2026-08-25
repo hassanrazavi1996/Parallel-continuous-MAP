@@ -5,7 +5,7 @@ config.update("jax_enable_x64", True)
 import jax.numpy as jnp
 from cmap.clqt_jax import CLQT, seqBackwardPass, parBackwardPass
 
-
+import jax
 def make_test_ocp():
     nx = 4
     nz = 2
@@ -126,7 +126,8 @@ def test_seq_vs_par_backward_pass_equal():
         d_seq.shape == d_par.shape
     ), f"d shape mismatch {d_seq.shape} != {d_par.shape}"
 
-    assert jnp.allclose(S_seq, S_par, atol=1e-7)
-    assert jnp.allclose(v_seq, v_par, atol=1e-7)
-    assert jnp.allclose(Kx_seq, Kx_par, atol=1e-7)
-    assert jnp.allclose(d_seq, d_par, atol=1e-7)
+    
+    assert jnp.allclose(S_seq, S_par, atol=1e-9)
+    assert jnp.allclose(v_seq, v_par, atol=1e-9)
+    assert jnp.allclose(Kx_seq, Kx_par, atol=1e-9)
+    assert jnp.allclose(d_seq, d_par, atol=1e-9)

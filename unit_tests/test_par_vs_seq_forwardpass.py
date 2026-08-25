@@ -11,6 +11,7 @@ from cmap.clqt_jax import (
     parForwardPass,
 )
 
+import jax
 
 def make_test_ocp():
     nx = 4
@@ -135,6 +136,8 @@ def test_seq_vs_par_forward_pass_equal():
     assert (
         u_seq.shape == u_par.shape
     ), f"u shape mismatch {u_seq.shape} vs {u_par.shape}"
+    jax.debug.print("x_seq: {x}", x=jnp.linalg.norm(x_seq - x_par)/jnp.linalg.norm(x_seq))
+    jax.debug.print("u_seq: {u}", u=jnp.linalg.norm(u_seq - u_par)/jnp.linalg.norm(u_seq))
 
-    assert jnp.allclose(x_seq, x_par, atol=1e-6, rtol=1e-6)
-    assert jnp.allclose(u_seq, u_par, atol=1e-6, rtol=1e-6)
+    assert jnp.allclose(x_seq, x_par, atol=1e-6, rtol=1e-7)
+    assert jnp.allclose(u_seq, u_par, atol=1e-6, rtol=1e-7)

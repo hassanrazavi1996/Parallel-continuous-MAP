@@ -10,12 +10,12 @@ from cmap.nonlinear_iclqt import seq_iterate
 from cmap.nonlinear_iclqt import par_iterate
 
 
-def clqt_seq_speedtest_nonlinear(clqt, steps, blocks, f, h, x, t0, niter):
+def clqt_seq_speedtest_nonlinear(clqt, steps, blocks, f, h, x, t0, niter, diffeq_solver):
 
     def step(carry, _):
         x = carry
 
-        x_seq = seq_iterate(clqt, steps, blocks, f, h, x, t0)
+        x_seq = seq_iterate(clqt, steps, blocks, f, h, x, t0,diffeq_solver)
 
         x_seq_new = x_seq
 
@@ -27,13 +27,13 @@ def clqt_seq_speedtest_nonlinear(clqt, steps, blocks, f, h, x, t0, niter):
     return x_seq_final
 
 
-def clqt_par_speedtest_nonlinear(clqt, steps, blocks, f, h, x, t0, niter):
+def clqt_par_speedtest_nonlinear(clqt, steps, blocks, f, h, x, t0, niter, diffeq_solver):
 
     def step(carry, _):
 
         x = carry
 
-        x_par = par_iterate(clqt, steps, blocks, f, h, x, t0)
+        x_par = par_iterate(clqt, steps, blocks, f, h, x, t0, diffeq_solver)
 
         x_par_new = x_par
 

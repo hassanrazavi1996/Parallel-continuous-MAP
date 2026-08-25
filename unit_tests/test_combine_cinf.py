@@ -1,3 +1,8 @@
+from jax import config
+
+config.update("jax_enable_x64", True)
+
+
 import jax.numpy as jnp
 from cmap.clqt_jax import combine_abcej_forward
 
@@ -30,4 +35,4 @@ def test_combine_abcej_forward_Cij_infinite():
     Jik_exp = Jij
 
     for got, exp in zip(out, (Aik_exp, bik_exp, Cik_exp, etaik_exp, Jik_exp)):
-        assert jnp.allclose(got, exp, atol=1e-6, rtol=1e-6)
+        assert jnp.allclose(got, exp, atol=1e-7, rtol=1e-7)
