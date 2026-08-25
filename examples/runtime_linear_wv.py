@@ -90,15 +90,14 @@ for i in range(0, len(blocks)):
     seq_time_array = []
     dt = clqt.T / steps_all
 
-    de_solver = 'euler'
 
     seq_jit = lambda t0, dt, ST, vT: clqt_seq_speedtest_linear(
-        clqt, steps_all, t0, dt, ST, vT, de_solver
+        clqt, steps_all, t0, dt, ST, vT, method="euler"
     )
     jit_fun1 = jax.jit(seq_jit)
     _, _ = jit_fun1(t0, dt, ST, vT)
 
-    par_jit = lambda t0, dt: clqt_par_speedtest_linear(clqt, block, n, t0, dt,de_solver)
+    par_jit = lambda t0, dt: clqt_par_speedtest_linear(clqt, block, n, t0, dt,method="euler")
     jit_fun2 = jax.jit(par_jit)
     _, _ = jit_fun2(t0, dt)
 

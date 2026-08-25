@@ -8,8 +8,11 @@ import jax.numpy as jnp
 import jax.scipy.linalg as jlinalg
 from jax import lax, vmap
 from cmap.diffeq_jax import euler
+from cmap.diffeq_jax import heun
+
 from typing import NamedTuple
 from typing import Callable
+
 
 
 def pack_abcej(A, b, C, eta, J):
@@ -63,6 +66,13 @@ def unpack_Sv(x):
     S = x[..., :n]
     v = x[..., n]
     return S, v
+
+
+
+step_functions = {
+    "euler": euler,
+    "heun": heun,
+}
 
 
 
