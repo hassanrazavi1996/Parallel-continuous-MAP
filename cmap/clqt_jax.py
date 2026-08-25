@@ -126,11 +126,13 @@ def riccati_ode_f(ocp: CLQT, x, t):
 
 
 def seqBackwardPass(ocp: CLQT, steps, dt, t0, S, v, diffeq_solver):
-
+    
     Q = ocp.Q(0)
     Kx = jnp.zeros_like(ocp.Q(0))
     d = jnp.zeros((Q.shape[-1],))
     Ts = dt * jnp.arange(steps)
+
+    solver = step_functions.get(diffeq_solver, diffeq_solver)
 
     def step(carry, t):
 
@@ -139,7 +141,7 @@ def seqBackwardPass(ocp: CLQT, steps, dt, t0, S, v, diffeq_solver):
         S, v, _, _ = carry
 
         x = pack_Sv(S, v)
-        x = diffeq_solver(f, -dt, x, t + dt)
+        x = solver(f, -dt, x, t + dt)
         S, v = unpack_Sv(x)
 
         S = 0.5 * (S + S.T)
@@ -165,6 +167,8 @@ def seqForwardPass(ocp: CLQT, dt, t_start, x0, Kx_block, d_block, diffeq_solver,
     steps = Kx_block.shape[0]
     times = t_start + dt * jnp.arange(steps)
 
+    solver = step_functions.get(diffeq_solver, diffeq_solver)
+
     def step(x, t_Kd):
 
         t, Kx, d = t_Kd
@@ -180,7 +184,7 @@ def seqForwardPass(ocp: CLQT, dt, t_start, x0, Kx_block, d_block, diffeq_solver,
             u_zoh, lambda _: dynamics_zoh(x, t), lambda _: dynamics_no_zoh(x, t), None
         )
 
-        x_next = diffeq_solver(f, dt, x, t)
+        x_next = solver(f, dt, x, t)
         return x_next, (u, x_next)
 
     scan_inputs = (times, Kx_block, d_block)
@@ -218,13 +222,14 @@ def FwdBwdPass_odes(ocp: CLQT, x, t):
 
 def seqFwdBwdPass(ocp: CLQT, steps, dt, t0, A0, b0, C0, diffeq_solver):
 
+    solver = step_functions[diffeq_solver]
     def step(carry, t): 
 
         A, b, C = carry
         f = lambda x, t: FwdBwdPass_odes(ocp, x, t)
 
         x = pack_abc(A, b, C)
-        x = diffeq_solver(f, dt, x, t)
+        x = solver(f, dt, x, t)
         A, b, C = unpack_abc(x)
 
         C = 0.5 * (C + C.T)
@@ -293,6 +298,9 @@ def parBackwardPass_init(ocp: CLQT, blocks, steps, t0, dt, diffeq_solver):
 
     elems = []
 
+    solver = step_functions.get(diffeq_solver, diffeq_solver)
+ 
+    
     dim = ocp.ST.shape[0]
 
     A0 = jnp.eye(dim)
@@ -310,7 +318,7 @@ def parBackwardPass_init(ocp: CLQT, blocks, steps, t0, dt, diffeq_solver):
         A, b, C, eta, J = carry
 
         x = pack_abcej(A, b, C, eta, J)
-        x = diffeq_solver(f, -dt, x, t + dt)
+        x = solver(f, -dt, x, t + dt)
         A, b, C, eta, J = unpack_abcej(x)
 
         C = 0.5 * (C + C.T)
@@ -348,7 +356,9 @@ def parBackwardPass_init(ocp: CLQT, blocks, steps, t0, dt, diffeq_solver):
     return elems
 
 
-def parBackwardPass_extract(ocp: CLQT, elems, steps, dt, t0):
+def parBackwardPass_extract(ocp: CLQT, elems, steps, dt, t0,diffeq_solver):
+
+    solver = step_functions[diffeq_solver]
 
     As, bs, Cs, etas, Js = elems
     blocks = Js.shape[0] - 1
@@ -358,8 +368,8 @@ def parBackwardPass_extract(ocp: CLQT, elems, steps, dt, t0):
     J_blocks = Js[1:]
     eta_blocks = etas[1:]
 
-    (Ss, vs, Kxs, ds) = vmap(seqBackwardPass, in_axes=(None, None, None, 0, 0, 0))(
-        ocp, steps, dt, t0s, J_blocks, eta_blocks
+    (Ss, vs, Kxs, ds) = vmap(seqBackwardPass, in_axes=(None, None, None, 0, 0, 0,None))(
+        ocp, steps, dt, t0s, J_blocks, eta_blocks, solver
     )
 
     Ss = Ss[:, 1:, :, :]
@@ -427,11 +437,13 @@ def par_bwd_pass_scan(elems):
 
 
 def parBackwardPass(ocp: CLQT, blocks, steps, t0, dt, diffeq_solver):
+
+    solver = diffeq_solver
    
-    elems = parBackwardPass_init(ocp, blocks, steps, t0, dt, diffeq_solver)
+    elems = parBackwardPass_init(ocp, blocks, steps, t0, dt, solver)
     elems = par_bwd_pass_scan(elems)
 
-    return parBackwardPass_extract(ocp, elems, steps, dt, t0)
+    return parBackwardPass_extract(ocp, elems, steps, dt, t0,solver)
 
 
 ###########################################################################
@@ -456,6 +468,7 @@ def fwpass_fw_ode_f(ocp: CLQT, x, t, Kx_d):
 
 def parForwardPass_init(ocp: CLQT, x0, Kx, d, blocks, steps, dt, t0, diffeq_solver):
 
+    solver = step_functions.get(diffeq_solver, diffeq_solver)
     elems = []
     Psi0 = jnp.eye((ocp.F(0)).shape[0])
     phi0 = x0
@@ -468,7 +481,7 @@ def parForwardPass_init(ocp: CLQT, x0, Kx, d, blocks, steps, dt, t0, diffeq_solv
         Psi, phi = carry
         f = lambda x, t: fwpass_fw_ode_f(ocp, x, t, (K, d))
         x = pack_Psiphi(Psi, phi)
-        x = diffeq_solver(f, dt, x, t)
+        x = solver(f, dt, x, t)
         Psi, phi = unpack_Psiphi(x)
 
         return (Psi, phi), (Psi, phi)
@@ -504,8 +517,9 @@ def parForwardPass_init(ocp: CLQT, x0, Kx, d, blocks, steps, dt, t0, diffeq_solv
     return elems
 
 
-def parForwardPass_extract(ocp: CLQT, Kxs, ds, elems, steps, dt, t0, u_zoh):
+def parForwardPass_extract(ocp: CLQT, Kxs, ds, elems, steps, dt, t0, diffeq_solver, u_zoh):
 
+    solver = step_functions.get(diffeq_solver, diffeq_solver)
     (Psis, phis) = elems
     blocks_n = phis.shape[0] - 1
     state_dim = phis.shape[-1]
@@ -515,8 +529,8 @@ def parForwardPass_extract(ocp: CLQT, Kxs, ds, elems, steps, dt, t0, u_zoh):
     Kxs = Kxs.reshape((blocks_n, steps, control_dim, state_dim))
     ds = ds.reshape((blocks_n, steps, control_dim))
 
-    (xs_blocks, us_blocks) = vmap(seqForwardPass, in_axes=(None, None, 0, 0, 0, 0))(
-        ocp, dt, t0s, phis[:-1], Kxs, ds
+    (xs_blocks, us_blocks) = vmap(seqForwardPass, in_axes=(None, None, 0, 0, 0, 0,None))(
+        ocp, dt, t0s, phis[:-1], Kxs, ds, solver
     )
 
     xs = xs_blocks[:, :-1, :].reshape(-1, state_dim)
@@ -542,9 +556,10 @@ def par_fwd_pass_scan(elems):
 
 def parForwardPass(ocp: CLQT, x0, Kx, d, blocks, steps, dt, t0,diffeq_solver ,u_zoh=False):
 
-    elems = parForwardPass_init(ocp, x0, Kx, d, blocks, steps, dt, t0,diffeq_solver)
+    solver = diffeq_solver
+    elems = parForwardPass_init(ocp, x0, Kx, d, blocks, steps, dt, t0,solver)
     elems = par_fwd_pass_scan(elems)
-    return parForwardPass_extract(ocp, Kx, d, elems, steps, dt=dt, t0=t0, u_zoh=u_zoh)
+    return parForwardPass_extract(ocp, Kx, d, elems, steps, dt=dt, t0=t0, diffeq_solver=solver, u_zoh=u_zoh)
 
 
 ###########################################################################
@@ -582,6 +597,9 @@ def parFwdBwd_init(ocp: CLQT,blocks, steps, t0, dt, diffeq_solver):
 
     elems = []
 
+    solver = step_functions[diffeq_solver]
+
+
     dim = ocp.ST.shape[0]
 
     A0 = jnp.eye(dim)
@@ -598,7 +616,7 @@ def parFwdBwd_init(ocp: CLQT,blocks, steps, t0, dt, diffeq_solver):
 
         A, b, C, eta, J = carry
         x = pack_abcej(A, b, C, eta, J)
-        x = diffeq_solver(f, dt, x, t)
+        x = solver(f, dt, x, t)
         A, b, C, eta, J = unpack_abcej(x)
 
         C = 0.5 * (C + C.T)
@@ -640,8 +658,11 @@ def parFwdBwd_init(ocp: CLQT,blocks, steps, t0, dt, diffeq_solver):
 
 def parFwdBwdPass_init(ocp: CLQT, C_init, blocks, steps, dt, t0, diffeq_solver):
 
+    solver = step_functions.get(diffeq_solver, diffeq_solver)
+
+
     (A_blocks, b_blocks, C_blocks, eta_blocks, J_blocks) = parFwdBwd_init(
-        ocp, blocks, steps, t0, dt, diffeq_solver
+        ocp, blocks, steps, t0, dt, solver
     )
     
     dim = ocp.ST.shape[0]
@@ -661,13 +682,14 @@ def parFwdBwdPass_init(ocp: CLQT, C_init, blocks, steps, dt, t0, diffeq_solver):
     # Js = jnp.concatenate([J_init[None],J_blocks[:-1]], axis=0)
 
     elems1 = (A_blocks, b_blocks, C_blocks, eta_blocks, J_blocks)
-    elems2=(A_blocks,b_blocks,C_blocks,eta_blocks,J_blocks)
+    elems2 = (A_blocks,b_blocks,C_blocks,eta_blocks,J_blocks)
 
     return elems1,elems2
 
 
-def parFwdBwdPass_extract(ocp: CLQT, K, d, S, v, elems, steps, dt, t0):
+def parFwdBwdPass_extract(ocp: CLQT, K, d, S, v, elems, steps, dt, t0, diffeq_solver):
 
+    solver = step_functions[diffeq_solver]
     (As, bs, Cs, etas, Js) = elems
     blocks = As.shape[0] - 1
 
@@ -677,8 +699,8 @@ def parFwdBwdPass_extract(ocp: CLQT, K, d, S, v, elems, steps, dt, t0):
     b_blocks = bs[:-1]
     C_blocks = Cs[:-1]
 
-    A_n, b_n, C_n = vmap(seqFwdBwdPass, in_axes=(None, None, None, 0, 0, 0, 0))(
-        ocp, steps, dt, t0s, A_blocks, b_blocks, C_blocks
+    A_n, b_n, C_n = vmap(seqFwdBwdPass, in_axes=(None, None, None, 0, 0, 0, 0,None))(
+        ocp, steps, dt, t0s, A_blocks, b_blocks, C_blocks,solver
     )
 
 

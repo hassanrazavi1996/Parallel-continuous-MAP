@@ -9,7 +9,7 @@ import jax.numpy as jnp
 
 
 from cmap.clqt_jax import parBackwardPass
-from cmap.clqt_jax import parFwdBwdPass_accurate
+from cmap.clqt_jax import parFwdBwdPass
 
 
 
@@ -22,7 +22,7 @@ def clqt_par_speedtest_linear_tfs(clqt, blocks, steps, t0, dt):
         S_list_jax_par,
         v_list_jax_par,
     ) = parBackwardPass(clqt, blocks, steps, t0, dt)
-    u_list_jax_par, x_list_jax_par = parFwdBwdPass_accurate(
+    u_list_jax_par, x_list_jax_par = parFwdBwdPass(
         clqt, C_init, Kx_list_jax_par, d_list_jax_par,S_list_jax_par, v_list_jax_par ,blocks, steps, dt, t0
     )
 

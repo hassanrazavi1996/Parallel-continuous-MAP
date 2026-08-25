@@ -92,23 +92,29 @@ for i in range(0, len(blocks)):
 
 
     seq_jit = lambda t0, dt, ST, vT: clqt_seq_speedtest_linear(
-        clqt, steps_all, t0, dt, ST, vT, method="euler"
+        clqt, steps_all, t0, dt, ST, vT, diffeq_solver="euler"
     )
     jit_fun1 = jax.jit(seq_jit)
     _, _ = jit_fun1(t0, dt, ST, vT)
 
-    par_jit = lambda t0, dt: clqt_par_speedtest_linear(clqt, block, n, t0, dt,method="euler")
+    par_jit = lambda t0, dt: clqt_par_speedtest_linear(clqt, block, n, t0, dt,diffeq_solver="euler")
     jit_fun2 = jax.jit(par_jit)
     _, _ = jit_fun2(t0, dt)
 
-    for _ in range(5):
+    jax.block_until_ready(jit_fun1(t0, dt, ST, vT))  
+    jax.block_until_ready(jit_fun2(t0, dt))
+
+    for _ in range(20):
         start_time = time.time()
-        _, _ = jit_fun1(t0, dt, ST, vT)
+        result1 = jit_fun1(t0, dt, ST, vT)
+        jax.block_until_ready(result1)
+
         end_time = time.time()
         seq_time = end_time - start_time
-
+    
         start_time = time.time()
-        _, _ = jit_fun2(t0, dt)
+        result2 = jit_fun2(t0, dt)
+        jax.block_until_ready(result2)
         end_time = time.time()
         par_time = end_time - start_time
 
@@ -137,13 +143,13 @@ df_mean_par = pd.DataFrame(par_time_means_arr)
 df_mean_seq = pd.DataFrame(seq_time_means_arr)
 
 
-df_mean_par.to_csv("par_time_linear_wv_euler.csv")
-df_mean_seq.to_csv("seq_time_linear_wv_euler.csv")
+df_mean_par.to_csv("runtime_linear_wv/par_time_linear_wv_euler.csv")
+df_mean_seq.to_csv("runtime_linear_wv/seq_time_linear_wv_euler.csv")
 
 
 from scipy import stats
 
-n_samp = 5  # reps per block size
+n_samp = 20  # reps per block size
 tval = stats.t.ppf(0.975, df=n_samp - 1)
 
 par_time_ci_arr = tval * jnp.sqrt(par_time_var_arr) / jnp.sqrt(n_samp)
@@ -151,6 +157,13 @@ seq_time_ci_arr = tval * jnp.sqrt(seq_time_var_arr) / jnp.sqrt(n_samp)
 
 
 plt.plot(blocks, par_time_means_arr, label="Parallel method", marker="o")
+plt.fill_between(
+    blocks,
+    par_time_means_arr - par_time_ci_arr,
+    par_time_means_arr + par_time_ci_arr,
+    alpha=0.2,
+)
+
 plt.plot(
     blocks,
     seq_time_means_arr,
@@ -158,7 +171,18 @@ plt.plot(
     linestyle="--",
     marker="x",
 )
+plt.fill_between(
+    blocks,
+    seq_time_means_arr - seq_time_ci_arr,
+    seq_time_means_arr + seq_time_ci_arr,
+    alpha=0.2,
+)
+
 plt.xscale("log")
 plt.yscale("log")
+plt.xlabel("Blocks")
+plt.ylabel("Runtime (s)")
 plt.legend()
 plt.show()
+
+plt.savefig("runtime_linear_wv/runtime_linear_wv_euler.png", dpi=150, bbox_inches="tight")
