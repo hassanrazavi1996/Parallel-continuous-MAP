@@ -146,6 +146,13 @@ df_mean_seq = pd.DataFrame(seq_time_means_arr)
 df_mean_par.to_csv("runtime_linear_wv/par_time_linear_wv_euler.csv")
 df_mean_seq.to_csv("runtime_linear_wv/seq_time_linear_wv_euler.csv")
 
+df_all_samples_par = pd.DataFrame(par_time_samples)
+df_all_samples_seq = pd.DataFrame(seq_time_samples)
+
+
+df_all_samples_par.to_csv("runtime_linear_wv/par_all_samples_linear_wv_euler.csv")
+df_all_samples_seq.to_csv("runtime_linear_wv/seq_all_samples_linear_wv_euler.csv")
+
 
 from scipy import stats
 
