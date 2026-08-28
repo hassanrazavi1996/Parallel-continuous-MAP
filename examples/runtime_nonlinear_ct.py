@@ -71,7 +71,7 @@ F = lambda t: jnp.eye(5)
 H = lambda t: jnp.array([[1.0, 0.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0, 0.0]])
 t0 = 0.0
 
-niter = 10
+niter = 5
 
 
 for i in range(0, len(blocks)):
@@ -124,7 +124,7 @@ for i in range(0, len(blocks)):
     par_time_array = []
     seq_time_array = []
 
-    for _ in range(20):
+    for _ in range(10):
         start_time = time.time()
         result1 = jit_fun1(x, t0)
         jax.block_until_ready(result1)
@@ -172,7 +172,7 @@ df_all_samples_seq.to_csv("runtime_nonlinear_ct/seq_all_samples_nonlinear_ct_eul
 
 from scipy import stats
 
-n_samp = 20  # reps per block size
+n_samp = 10  # reps per block size
 tval = stats.t.ppf(0.975, df=n_samp - 1)
 
 par_time_ci_arr = tval * jnp.sqrt(par_time_var_arr) / jnp.sqrt(n_samp)

@@ -13,17 +13,17 @@ from cmap.clqt_jax import parFwdBwdPass
 
 
 
-def clqt_par_speedtest_linear_tfs(clqt, blocks, steps, t0, dt):
+def clqt_par_speedtest_linear_tfs(clqt, blocks, steps, t0, dt,diffeq_solver):
     
-    C_init=200
+    kappa=1000
     (
         Kx_list_jax_par,
         d_list_jax_par,
         S_list_jax_par,
         v_list_jax_par,
-    ) = parBackwardPass(clqt, blocks, steps, t0, dt)
+    ) = parBackwardPass(clqt, blocks, steps, t0, dt,diffeq_solver)
     u_list_jax_par, x_list_jax_par = parFwdBwdPass(
-        clqt, C_init, Kx_list_jax_par, d_list_jax_par,S_list_jax_par, v_list_jax_par ,blocks, steps, dt, t0
+        clqt, kappa, Kx_list_jax_par, d_list_jax_par,S_list_jax_par, v_list_jax_par ,blocks, steps, dt, t0,diffeq_solver
     )
 
     return u_list_jax_par, x_list_jax_par
