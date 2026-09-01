@@ -22,10 +22,10 @@ blocks = jnp.logspace(2, 5, 8, base=10, dtype=jnp.int32)
 n = 10
 
 
-T = 5.0
+T = 1.0
 q = 4
 v = 0.01
-p0 = 0.01
+p0 = 0.001
 
 t0 = 0.0
 
@@ -51,7 +51,8 @@ r = lambda t: jnp.zeros((2,))
 m0 = jnp.array([5.0, 5.0, 0.0, 0.0])
 
 
-par_time_means = []
+par_time_means  = []
+par_time_samples= []
 
 
 for i in range(0, len(blocks)):
@@ -76,36 +77,72 @@ for i in range(0, len(blocks)):
     vT = clqt.vT
 
     par_time_array = []
-    seq_time_array = []
     dt = clqt.T / steps_all
 
-    par_jit = lambda t0, dt: clqt_par_speedtest_linear_tfs(clqt, block, n, t0, dt)
+    par_jit = lambda t0, dt: clqt_par_speedtest_linear_tfs(clqt, block, n, t0, dt,diffeq_solver='euler')
     jit_fun2 = jax.jit(par_jit)
     _, _ = jit_fun2(t0, dt)
 
-    for _ in range(5):
+    jax.block_until_ready(jit_fun2(t0, dt))
+
+    for _ in range(20):
 
         start_time = time.time()
-        _, _ = jit_fun2(t0, dt)
+        results = jit_fun2(t0, dt)
+        jax.block_until_ready(results)
         end_time = time.time()
         par_time = end_time - start_time
 
         par_time_array.append(par_time)
 
     par_time_means.append(jnp.mean(jnp.array(par_time_array)))
+    par_time_samples.append(par_time_array)
+    
 
 
 par_time_means_arr = jnp.array(par_time_means)
-
-
 df_mean_par = pd.DataFrame(par_time_means_arr)
+df_mean_par.to_csv("runtime_linear_wv_tfs/par_time_linear_wv_tfs.csv")
 
 
-df_mean_par.to_csv("par_time_linear_wv_tfs.csv")
+df_all_samples_par= pd.DataFrame(par_time_samples)
+par_time_var_arr = jnp.var(jnp.array(par_time_samples), axis=1, ddof=1)
+
+
+df_all_samples_par.to_csv("runtime_linear_wv_tfs/par_all_samples_linear_wv_euler_tfs.csv")
+
+from scipy import stats
+n_samp = 20  # reps per block size
+tval = stats.t.ppf(0.975, df=n_samp - 1)
+
+par_time_ci_arr = tval * jnp.sqrt(par_time_var_arr) / jnp.sqrt(n_samp)
+
+
+
+
+from scipy import stats
+
+n_samp = 20  # reps per block size
+tval = stats.t.ppf(0.975, df=n_samp - 1)
+
+par_time_ci_arr = tval * jnp.sqrt(par_time_var_arr) / jnp.sqrt(n_samp)
 
 
 plt.plot(blocks, par_time_means_arr, label="Parallel method", marker="o")
+plt.fill_between(
+    blocks,
+    par_time_means_arr - par_time_ci_arr,
+    par_time_means_arr + par_time_ci_arr,
+    alpha=0.2,
+)
+
+
+
 plt.xscale("log")
 plt.yscale("log")
+plt.xlabel("Blocks")
+plt.ylabel("Runtime (s)")
 plt.legend()
 plt.show()
+
+plt.savefig("runtime_linear_wv_tfs/runtime_linear_wv_euler_tfs.png", dpi=150, bbox_inches="tight")

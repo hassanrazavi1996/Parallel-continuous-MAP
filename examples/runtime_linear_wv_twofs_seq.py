@@ -1,3 +1,6 @@
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+
 import jax
 import jax.numpy as jnp
 from jax import config
@@ -22,7 +25,7 @@ blocks = jnp.logspace(2, 5, 8, base=10, dtype=jnp.int32)
 n = 10
 
 
-T = 5.0
+T = 1.0
 q = 4
 v = 0.01
 p0 = 0.01
@@ -50,8 +53,8 @@ r = lambda t: jnp.zeros((2,))
 m0 = jnp.array([5.0, 5.0, 0.0, 0.0])
 
 
-par_time_means = []
 seq_time_means = []
+seq_time_samples= []
 
 
 for i in range(0, len(blocks)):
@@ -78,33 +81,69 @@ for i in range(0, len(blocks)):
     seq_time_array = []
     dt = clqt.T / steps_all
 
-    seq_jit = lambda t0, dt: clqt_seq_speedtest_linear_tfs_seq(clqt, steps_all, t0, dt, ST, vT)
+    seq_jit = lambda t0, dt: clqt_seq_speedtest_linear_tfs_seq(clqt, steps_all, t0, dt, ST, vT,diffeq_solver='euler')
     jit_fun1 = jax.jit(seq_jit)
     _, _ = jit_fun1(t0, dt)
+    jax.block_until_ready(jit_fun1(t0, dt))
 
-    for _ in range(5):
+    for _ in range(20):
 
         start_time = time.time()
-        _, _ = jit_fun1(t0, dt)
+        results= jit_fun1(t0, dt)
+        jax.block_until_ready(results)
         end_time = time.time()
         seq_time = end_time - start_time
 
         seq_time_array.append(seq_time)
+        seq_time_samples.append(seq_time_array)
+
 
     seq_time_means.append(jnp.mean(jnp.array(seq_time_array)))
 
 
 seq_time_means_arr = jnp.array(seq_time_means)
+df_mean_seq = pd.DataFrame(seq_time_means_arr)
+df_mean_seq.to_csv("runtime_linear_wv_tfs/seq_time_linear_wv_tfs.csv")
 
 
-df_mean_par = pd.DataFrame(seq_time_means_arr)
+df_all_samples_seq= pd.DataFrame(seq_time_samples)
+seq_time_var_arr = jnp.var(jnp.array(seq_time_samples), axis=1, ddof=1)
 
 
-df_mean_par.to_csv("seq_time_linear_wv_tfs.csv")
+df_all_samples_seq.to_csv("runtime_linear_wv_tfs/seq_all_samples_linear_wv_euler_tfs.csv")
+
+from scipy import stats
+n_samp = 20  # reps per block size
+tval = stats.t.ppf(0.975, df=n_samp - 1)
+
+seq_time_ci_arr = tval * jnp.sqrt(seq_time_var_arr) / jnp.sqrt(n_samp)
+
+
+
+
+from scipy import stats
+
+n_samp = 20  # reps per block size
+tval = stats.t.ppf(0.975, df=n_samp - 1)
+
+seq_time_ci_arr = tval * jnp.sqrt(seq_time_var_arr) / jnp.sqrt(n_samp)
 
 
 plt.plot(blocks, seq_time_means_arr, label="Sequential method", marker="o")
+plt.fill_between(
+    blocks,
+    seq_time_means_arr - seq_time_ci_arr,
+    seq_time_means_arr + seq_time_ci_arr,
+    alpha=0.2,
+)
+
+
+
 plt.xscale("log")
 plt.yscale("log")
+plt.xlabel("Blocks")
+plt.ylabel("Runtime (s)")
 plt.legend()
 plt.show()
+
+plt.savefig("runtime_seq_linear_wv_tfs/runtime_seq_linear_wv_euler_tfs.png", dpi=150, bbox_inches="tight")
