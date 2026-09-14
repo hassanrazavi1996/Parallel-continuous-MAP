@@ -115,19 +115,19 @@ def test_seq_vs_par_forward_pass_equal():
     t0 = 0.0
 
     S_seq, v_seq, Kx_seq, d_seq = seqBackwardPass(
-        ocp, steps_all, dt, t0, ocp.ST, ocp.vT
+        ocp, steps_all, dt, t0, ocp.ST, ocp.vT,diffeq_solver='heun'
     )
-    Kx_par, d_par, S_par, v_par = parBackwardPass(ocp, blocks, steps, t0, dt)
+    Kx_par, d_par, S_par, v_par = parBackwardPass(ocp, blocks, steps, t0, dt,diffeq_solver='heun')
 
     assert Kx_seq.shape == Kx_par.shape
     assert d_seq.shape == d_par.shape
 
     phi0 = jnp.linalg.solve(S_seq[0], v_seq[0])
 
-    x_seq, u_seq = seqForwardPass(ocp, dt, t0, phi0, Kx_seq, d_seq, u_zoh=False)
+    x_seq, u_seq = seqForwardPass(ocp, dt, t0, phi0, Kx_seq, d_seq,diffeq_solver='heun' ,u_zoh=False)
 
     u_par, x_par = parForwardPass(
-        ocp, phi0, Kx_par, d_par, blocks, steps, dt, t0, u_zoh=False
+        ocp, phi0, Kx_par, d_par, blocks, steps, dt, t0,diffeq_solver='heun' ,u_zoh=False
     )
 
     assert (

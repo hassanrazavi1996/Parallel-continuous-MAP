@@ -22,7 +22,7 @@ def test_parFwdBwd_init_trivial_system():
     t0 = 0.0
     ocp = make_zero_ocp(n)
 
-    As, bs, Cs, etas, Js = parFwdBwd_init(ocp, blocks, steps, t0, dt)
+    As, bs, Cs, etas, Js = parFwdBwd_init(ocp, blocks, steps, t0, dt,diffeq_solver='heun')
 
     assert As.shape == (blocks + 1, n, n)
     assert bs.shape == (blocks + 1, n)

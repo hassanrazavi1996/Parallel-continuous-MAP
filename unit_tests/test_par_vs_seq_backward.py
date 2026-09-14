@@ -108,10 +108,10 @@ def test_seq_vs_par_backward_pass_equal():
     t0 = 0.0
 
     S_seq, v_seq, Kx_seq, d_seq = seqBackwardPass(
-        ocp, steps_all, dt, t0, ocp.ST, ocp.vT
+        ocp, steps_all, dt, t0, ocp.ST, ocp.vT,diffeq_solver='heun'
     )
 
-    Kx_par, d_par, S_par, v_par = parBackwardPass(ocp, blocks, steps, t0, dt)
+    Kx_par, d_par, S_par, v_par = parBackwardPass(ocp, blocks, steps, t0, dt,diffeq_solver='heun')
 
     assert (
         S_seq.shape == S_par.shape
