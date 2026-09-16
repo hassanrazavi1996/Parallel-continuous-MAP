@@ -1,3 +1,7 @@
+The codes are implementations of the parallel-in-time methods in the following paper:
+Hassan Razavi, Ángel F. García-Fernández, and Simo Särkkä. "Temporal parallelisation of continuous-time maximum-a-posteriori trajectory estimation." arXiv preprint arXiv:2512.13319 (2025). [The arXive's link](https://arxiv.org/abs/2512.13319)
+
+
 ## Instructions for Installing
 Clone the repository
 ```bash
