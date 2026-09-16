@@ -24,8 +24,9 @@ def test_combine_abcej_forward_Cij_infinite():
     alpha = 1e8
     Cij = alpha * C_base
 
-    out = combine_abcej_forward((Aij, bij, Cij, etaij, Jij),
-                                (Ajk, bjk, Cjk, etajk, Jjk))
+    out = combine_abcej_forward(
+        (Aij, bij, Cij, etaij, Jij), (Ajk, bjk, Cjk, etajk, Jjk)
+    )
 
     Jjk_inv = jnp.linalg.inv(Jjk)
     Aik_exp = jnp.zeros_like(Aij)

@@ -51,8 +51,8 @@ r = lambda t: jnp.zeros((2,))
 m0 = jnp.array([5.0, 5.0, 0.0, 0.0])
 
 
-par_time_means  = []
-par_time_samples= []
+par_time_means = []
+par_time_samples = []
 
 
 for i in range(0, len(blocks)):
@@ -79,7 +79,9 @@ for i in range(0, len(blocks)):
     par_time_array = []
     dt = clqt.T / steps_all
 
-    par_jit = lambda t0, dt: clqt_par_speedtest_linear_tfs(clqt, block, n, t0, dt,diffeq_solver='euler')
+    par_jit = lambda t0, dt: clqt_par_speedtest_linear_tfs(
+        clqt, block, n, t0, dt, diffeq_solver="euler"
+    )
     jit_fun2 = jax.jit(par_jit)
     _, _ = jit_fun2(t0, dt)
 
@@ -97,7 +99,6 @@ for i in range(0, len(blocks)):
 
     par_time_means.append(jnp.mean(jnp.array(par_time_array)))
     par_time_samples.append(par_time_array)
-    
 
 
 par_time_means_arr = jnp.array(par_time_means)
@@ -105,19 +106,20 @@ df_mean_par = pd.DataFrame(par_time_means_arr)
 df_mean_par.to_csv("runtime_linear_wv_tfs/par_time_linear_wv_tfs.csv")
 
 
-df_all_samples_par= pd.DataFrame(par_time_samples)
+df_all_samples_par = pd.DataFrame(par_time_samples)
 par_time_var_arr = jnp.var(jnp.array(par_time_samples), axis=1, ddof=1)
 
 
-df_all_samples_par.to_csv("runtime_linear_wv_tfs/par_all_samples_linear_wv_euler_tfs.csv")
+df_all_samples_par.to_csv(
+    "runtime_linear_wv_tfs/par_all_samples_linear_wv_euler_tfs.csv"
+)
 
 from scipy import stats
+
 n_samp = 20  # reps per block size
 tval = stats.t.ppf(0.975, df=n_samp - 1)
 
 par_time_ci_arr = tval * jnp.sqrt(par_time_var_arr) / jnp.sqrt(n_samp)
-
-
 
 
 from scipy import stats
@@ -137,7 +139,6 @@ plt.fill_between(
 )
 
 
-
 plt.xscale("log")
 plt.yscale("log")
 plt.xlabel("Blocks")
@@ -145,4 +146,8 @@ plt.ylabel("Runtime (s)")
 plt.legend()
 plt.show()
 
-plt.savefig("runtime_linear_wv_tfs/runtime_linear_wv_euler_tfs.png", dpi=150, bbox_inches="tight")
+plt.savefig(
+    "runtime_linear_wv_tfs/runtime_linear_wv_euler_tfs.png",
+    dpi=150,
+    bbox_inches="tight",
+)

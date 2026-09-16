@@ -13,6 +13,7 @@ from cmap.clqt_jax import (
 
 import jax
 
+
 def make_test_ocp():
     nx = 4
     nz = 2
@@ -115,19 +116,32 @@ def test_seq_vs_par_forward_pass_equal():
     t0 = 0.0
 
     S_seq, v_seq, Kx_seq, d_seq = seqBackwardPass(
-        ocp, steps_all, dt, t0, ocp.ST, ocp.vT,diffeq_solver='heun'
+        ocp, steps_all, dt, t0, ocp.ST, ocp.vT, diffeq_solver="heun"
     )
-    Kx_par, d_par, S_par, v_par = parBackwardPass(ocp, blocks, steps, t0, dt,diffeq_solver='heun')
+    Kx_par, d_par, S_par, v_par = parBackwardPass(
+        ocp, blocks, steps, t0, dt, diffeq_solver="heun"
+    )
 
     assert Kx_seq.shape == Kx_par.shape
     assert d_seq.shape == d_par.shape
 
     phi0 = jnp.linalg.solve(S_seq[0], v_seq[0])
 
-    x_seq, u_seq = seqForwardPass(ocp, dt, t0, phi0, Kx_seq, d_seq,diffeq_solver='heun' ,u_zoh=False)
+    x_seq, u_seq = seqForwardPass(
+        ocp, dt, t0, phi0, Kx_seq, d_seq, diffeq_solver="heun", u_zoh=False
+    )
 
     u_par, x_par = parForwardPass(
-        ocp, phi0, Kx_par, d_par, blocks, steps, dt, t0,diffeq_solver='heun' ,u_zoh=False
+        ocp,
+        phi0,
+        Kx_par,
+        d_par,
+        blocks,
+        steps,
+        dt,
+        t0,
+        diffeq_solver="heun",
+        u_zoh=False,
     )
 
     assert (
@@ -136,8 +150,12 @@ def test_seq_vs_par_forward_pass_equal():
     assert (
         u_seq.shape == u_par.shape
     ), f"u shape mismatch {u_seq.shape} vs {u_par.shape}"
-    jax.debug.print("x_seq: {x}", x=jnp.linalg.norm(x_seq - x_par)/jnp.linalg.norm(x_seq))
-    jax.debug.print("u_seq: {u}", u=jnp.linalg.norm(u_seq - u_par)/jnp.linalg.norm(u_seq))
+    jax.debug.print(
+        "x_seq: {x}", x=jnp.linalg.norm(x_seq - x_par) / jnp.linalg.norm(x_seq)
+    )
+    jax.debug.print(
+        "u_seq: {u}", u=jnp.linalg.norm(u_seq - u_par) / jnp.linalg.norm(u_seq)
+    )
 
     assert jnp.allclose(x_seq, x_par, atol=1e-6, rtol=1e-7)
     assert jnp.allclose(u_seq, u_par, atol=1e-6, rtol=1e-7)

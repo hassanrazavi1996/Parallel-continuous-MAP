@@ -4,7 +4,6 @@ config.update("jax_enable_x64", True)
 
 import jax.numpy as jnp
 
-
 f = lambda x: jnp.array(
     [
         x[2],  # dp_x/dt = vx

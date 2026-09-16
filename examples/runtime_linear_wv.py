@@ -1,4 +1,5 @@
 import os
+
 os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 import jax
@@ -10,7 +11,6 @@ import pandas as pd
 import time
 
 config.update("jax_enable_x64", True)
-
 
 
 from linear_model_wv_data import make_wv_data
@@ -32,7 +32,7 @@ n = 10
 T = 5.0
 q = 4
 v = 0.01
-p0 = 0.01
+p0 = 0.001
 
 t0 = 0.0
 
@@ -90,18 +90,19 @@ for i in range(0, len(blocks)):
     seq_time_array = []
     dt = clqt.T / steps_all
 
-
     seq_jit = lambda t0, dt, ST, vT: clqt_seq_speedtest_linear(
         clqt, steps_all, t0, dt, ST, vT, diffeq_solver="euler"
     )
     jit_fun1 = jax.jit(seq_jit)
     _, _ = jit_fun1(t0, dt, ST, vT)
 
-    par_jit = lambda t0, dt: clqt_par_speedtest_linear(clqt, block, n, t0, dt,diffeq_solver="euler")
+    par_jit = lambda t0, dt: clqt_par_speedtest_linear(
+        clqt, block, n, t0, dt, diffeq_solver="euler"
+    )
     jit_fun2 = jax.jit(par_jit)
     _, _ = jit_fun2(t0, dt)
 
-    jax.block_until_ready(jit_fun1(t0, dt, ST, vT))  
+    jax.block_until_ready(jit_fun1(t0, dt, ST, vT))
     jax.block_until_ready(jit_fun2(t0, dt))
 
     for _ in range(20):
@@ -111,7 +112,7 @@ for i in range(0, len(blocks)):
 
         end_time = time.time()
         seq_time = end_time - start_time
-    
+
         start_time = time.time()
         result2 = jit_fun2(t0, dt)
         jax.block_until_ready(result2)
@@ -127,8 +128,6 @@ for i in range(0, len(blocks)):
     par_time_samples.append(par_time_array)
     seq_time_samples.append(seq_time_array)
 
-    
-
 
 par_time_means_arr = jnp.array(par_time_means)
 seq_time_means_arr = jnp.array(seq_time_means)
@@ -136,7 +135,6 @@ seq_time_means_arr = jnp.array(seq_time_means)
 
 par_time_var_arr = jnp.var(jnp.array(par_time_samples), axis=1, ddof=1)
 seq_time_var_arr = jnp.var(jnp.array(seq_time_samples), axis=1, ddof=1)
-
 
 
 df_mean_par = pd.DataFrame(par_time_means_arr)
@@ -192,4 +190,6 @@ plt.ylabel("Runtime (s)")
 plt.legend()
 plt.show()
 
-plt.savefig("runtime_linear_wv/runtime_linear_wv_euler.png", dpi=150, bbox_inches="tight")
+plt.savefig(
+    "runtime_linear_wv/runtime_linear_wv_euler.png", dpi=150, bbox_inches="tight"
+)

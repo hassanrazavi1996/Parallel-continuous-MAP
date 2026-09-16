@@ -15,6 +15,7 @@ def euler(f: Callable, dt: float, x: jnp.ndarray, t: Optional[float]) -> jnp.nda
 
     return x_next
 
+
 def heun(f: Callable, dt: float, x: jnp.ndarray, t: Optional[float]) -> jnp.ndarray:
 
     k1 = f(x, t)

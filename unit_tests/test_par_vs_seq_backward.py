@@ -6,6 +6,8 @@ import jax.numpy as jnp
 from cmap.clqt_jax import CLQT, seqBackwardPass, parBackwardPass
 
 import jax
+
+
 def make_test_ocp():
     nx = 4
     nz = 2
@@ -108,10 +110,12 @@ def test_seq_vs_par_backward_pass_equal():
     t0 = 0.0
 
     S_seq, v_seq, Kx_seq, d_seq = seqBackwardPass(
-        ocp, steps_all, dt, t0, ocp.ST, ocp.vT,diffeq_solver='heun'
+        ocp, steps_all, dt, t0, ocp.ST, ocp.vT, diffeq_solver="heun"
     )
 
-    Kx_par, d_par, S_par, v_par = parBackwardPass(ocp, blocks, steps, t0, dt,diffeq_solver='heun')
+    Kx_par, d_par, S_par, v_par = parBackwardPass(
+        ocp, blocks, steps, t0, dt, diffeq_solver="heun"
+    )
 
     assert (
         S_seq.shape == S_par.shape
@@ -126,7 +130,6 @@ def test_seq_vs_par_backward_pass_equal():
         d_seq.shape == d_par.shape
     ), f"d shape mismatch {d_seq.shape} != {d_par.shape}"
 
-    
     assert jnp.allclose(S_seq, S_par, atol=1e-9)
     assert jnp.allclose(v_seq, v_par, atol=1e-9)
     assert jnp.allclose(Kx_seq, Kx_par, atol=1e-9)

@@ -1,4 +1,5 @@
 import os
+
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 import jax
@@ -42,7 +43,7 @@ pos_std = 1e-1
 vel_std = 1e-1
 omega_std = 2e-1
 
-sigma_v = 5e-3
+sigma_v = 5e-4
 sigma_omega = 0.02
 
 r_range = 0.005
@@ -51,13 +52,15 @@ r_bearing = 0.001
 R = lambda t: jnp.array([[r_range**2, 0], [0, r_bearing**2]])
 P0 = jnp.diag(jnp.array([pos_std**2, pos_std**2, vel_std**2, vel_std**2, omega_std**2]))
 W = lambda t: jnp.eye(3)
-L = lambda t:  jnp.array([
-        [ 0.0, 0.0,0.0],
-        [ 0.0, 0.0,0.0],
-        [sigma_v,0.0,0.0],
-        [0.0,sigma_v,0.0],
-        [0.0,0.0,sigma_omega]
-    ])
+L = lambda t: jnp.array(
+    [
+        [0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0],
+        [sigma_v, 0.0, 0.0],
+        [0.0, sigma_v, 0.0],
+        [0.0, 0.0, sigma_omega],
+    ]
+)
 
 Q = lambda t: L(t) @ W(t) @ L(t).T
 c = lambda t: jnp.zeros((5,))
@@ -107,18 +110,18 @@ for i in range(0, len(blocks)):
     dt = T / steps_all
 
     seq_jit = lambda x, t0: clqt_seq_speedtest_nonlinear(
-        clqt, n, block, f, h, x, t0, niter,diffeq_solver="euler"
+        clqt, n, block, f, h, x, t0, niter, diffeq_solver="euler"
     )
     jit_fun1 = jax.jit(seq_jit)
     _ = jit_fun1(x, t0)
 
     par_jit = lambda x, t0: clqt_par_speedtest_nonlinear(
-        clqt, n, block, f, h, x, t0, niter,diffeq_solver="euler"
+        clqt, n, block, f, h, x, t0, niter, diffeq_solver="euler"
     )
     jit_fun2 = jax.jit(par_jit)
     _ = jit_fun2(x, t0)
 
-    jax.block_until_ready(jit_fun1(x, t0))  
+    jax.block_until_ready(jit_fun1(x, t0))
     jax.block_until_ready(jit_fun2(x, t0))
 
     par_time_array = []
@@ -159,8 +162,6 @@ df_all_samples_seq = pd.DataFrame(seq_time_samples)
 
 df_mean_par = pd.DataFrame(par_time_means_arr)
 df_mean_seq = pd.DataFrame(seq_time_means_arr)
-
-
 
 
 df_mean_par.to_csv("runtime_nonlinear_ct/par_time_nonlinear_ct_euler.csv")
@@ -208,4 +209,6 @@ plt.ylabel("Runtime (s)")
 plt.legend()
 plt.show()
 
-plt.savefig("runtime_nonlinear_ct/runtime_nonlinear_ct_euler.png", dpi=150, bbox_inches="tight")
+plt.savefig(
+    "runtime_nonlinear_ct/runtime_nonlinear_ct_euler.png", dpi=150, bbox_inches="tight"
+)

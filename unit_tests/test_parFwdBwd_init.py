@@ -1,6 +1,7 @@
 import jax.numpy as jnp
 from cmap.clqt_jax import CLQT, parFwdBwd_init
 
+
 def make_zero_ocp(n):
     F = lambda t: jnp.zeros((n, n))
     Q = lambda t: jnp.zeros((n, n))
@@ -14,6 +15,7 @@ def make_zero_ocp(n):
     T = 1.0
     return CLQT(vT=vT, F=F, ST=ST, Q=Q, R=R, c=c, H=H, y=y, r=r, T=T)
 
+
 def test_parFwdBwd_init_trivial_system():
     n = 3
     blocks = 2
@@ -22,7 +24,9 @@ def test_parFwdBwd_init_trivial_system():
     t0 = 0.0
     ocp = make_zero_ocp(n)
 
-    As, bs, Cs, etas, Js = parFwdBwd_init(ocp, blocks, steps, t0, dt,diffeq_solver='heun')
+    As, bs, Cs, etas, Js = parFwdBwd_init(
+        ocp, blocks, steps, t0, dt, diffeq_solver="heun"
+    )
 
     assert As.shape == (blocks + 1, n, n)
     assert bs.shape == (blocks + 1, n)
@@ -40,7 +44,7 @@ def test_parFwdBwd_init_trivial_system():
     assert jnp.allclose(etas[:-1], jnp.stack([zv] * blocks))
     assert jnp.allclose(Js[:-1], jnp.stack([Zm] * blocks))
 
-    assert jnp.allclose(As[-1], Zm)      
+    assert jnp.allclose(As[-1], Zm)
     assert jnp.allclose(bs[-1], zv)
     assert jnp.allclose(Cs[-1], Zm)
     assert jnp.allclose(etas[-1], ocp.vT)
